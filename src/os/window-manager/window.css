@@ -1,0 +1,159 @@
+.os-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-window);
+  box-shadow: var(--shadow-window);
+  overflow: hidden;
+  will-change: transform;
+}
+
+.os-window--focused {
+  box-shadow: var(--shadow-window-focus);
+  border-color: var(--glass-border-focus);
+}
+
+.os-window--maximized {
+  border-radius: 0;
+}
+
+.os-window__titlebar {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  flex: 0 0 38px;
+  padding: 0 12px;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+.os-window__lights {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 0;
+}
+
+.os-window__titlebar-spacer {
+  flex: 1 1 0;
+}
+
+.os-window__title {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.os-light {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: transparent;
+  transition: filter 120ms ease;
+}
+.os-light svg {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.os-window__lights:hover .os-light svg {
+  opacity: 1;
+}
+.os-light:active {
+  filter: brightness(0.8);
+}
+
+.os-light--close {
+  background: var(--light-close);
+  color: #7a1310;
+}
+.os-light--min {
+  background: var(--light-min);
+  color: #8a5d07;
+}
+.os-light--max {
+  background: var(--light-max);
+  color: #0b5c1a;
+}
+
+/* Janela sem foco: luzes viram pedrinhas neutras (como no macOS). */
+.os-window:not(.os-window--focused) .os-light {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.os-window__content {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+/* Handles de resize — invisíveis, mas generosos. */
+.os-resize {
+  position: absolute;
+  touch-action: none;
+  z-index: 10;
+}
+.os-resize--n {
+  top: -3px;
+  left: 12px;
+  right: 12px;
+  height: 7px;
+  cursor: ns-resize;
+}
+.os-resize--s {
+  bottom: -3px;
+  left: 12px;
+  right: 12px;
+  height: 7px;
+  cursor: ns-resize;
+}
+.os-resize--e {
+  right: -3px;
+  top: 12px;
+  bottom: 12px;
+  width: 7px;
+  cursor: ew-resize;
+}
+.os-resize--w {
+  left: -3px;
+  top: 12px;
+  bottom: 12px;
+  width: 7px;
+  cursor: ew-resize;
+}
+.os-resize--ne {
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  cursor: nesw-resize;
+}
+.os-resize--nw {
+  top: -4px;
+  left: -4px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.os-resize--se {
+  bottom: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+.os-resize--sw {
+  bottom: -4px;
+  left: -4px;
+  width: 14px;
+  height: 14px;
+  cursor: nesw-resize;
+}

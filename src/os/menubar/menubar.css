@@ -1,0 +1,97 @@
+.menubar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--menubar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  z-index: 9500;
+  user-select: none;
+}
+
+.menubar__left {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.menubar__logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.menubar__logo:hover,
+.menubar__logo--active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menubar__brand {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--marble);
+}
+
+.menubar__menu {
+  position: absolute;
+  top: calc(var(--menubar-height) + 4px);
+  left: 0;
+  min-width: 210px;
+  padding: 5px;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-window);
+  display: flex;
+  flex-direction: column;
+}
+
+.menubar__menu-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.menubar__menu-item:hover {
+  background: rgba(240, 212, 137, 0.16);
+  color: var(--laurel-bright);
+}
+
+.menubar__separator {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--glass-border);
+}
+
+.menubar__right {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.menubar__date {
+  color: var(--text-tertiary);
+  text-transform: capitalize;
+}
+
+.menubar__time {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}

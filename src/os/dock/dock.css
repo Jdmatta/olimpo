@@ -1,0 +1,55 @@
+.dock-zone {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 9000;
+}
+
+.dock {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 14px 6px;
+  border-radius: 22px;
+  box-shadow: var(--shadow-dock);
+}
+
+.dock__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.dock__icon {
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+.dock__icon:hover {
+  color: var(--laurel-bright);
+  background: rgba(255, 255, 255, 0.11);
+}
+.dock__icon:active {
+  filter: brightness(0.85);
+}
+
+.dock__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+.dock__dot--on {
+  background: var(--laurel);
+  box-shadow: 0 0 6px var(--laurel);
+}

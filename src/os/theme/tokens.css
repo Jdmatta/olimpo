@@ -1,0 +1,53 @@
+/* Olimpo design tokens — "vidro divino": noite no monte, vidro frio, ouro de láurea. */
+:root {
+  /* Palette */
+  --olympus-night: #070b18;
+  --olympus-deep: #0b1226;
+  --olympus-dusk: #1a2342;
+  --olympus-horizon: #3d4e8d;
+  --olympus-dawn: #8a7bb8;
+  --olympus-ember: #c9866b;
+  --laurel: #d9b45b;
+  --laurel-bright: #f0d489;
+  --marble: #e8e6f0;
+
+  /* Text */
+  --text-primary: rgba(238, 240, 250, 0.92);
+  --text-secondary: rgba(238, 240, 250, 0.6);
+  --text-tertiary: rgba(238, 240, 250, 0.38);
+
+  /* Glass surfaces */
+  --glass-bg: rgba(16, 22, 44, 0.55);
+  --glass-bg-strong: rgba(12, 17, 34, 0.72);
+  --glass-bg-soft: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-focus: rgba(240, 212, 137, 0.35);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-blur: 28px;
+  --glass-saturate: 160%;
+
+  /* Elevation */
+  --shadow-window: 0 24px 80px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-window-focus: 0 32px 100px rgba(0, 0, 0, 0.65), 0 6px 20px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(240, 212, 137, 0.12);
+  --shadow-dock: 0 12px 40px rgba(0, 0, 0, 0.45);
+
+  /* Geometry */
+  --radius-window: 14px;
+  --radius-panel: 12px;
+  --radius-control: 8px;
+  --menubar-height: 30px;
+  --dock-clearance: 92px;
+
+  /* Type */
+  --font-ui: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Cormorant Garamond Variable", "Cormorant Garamond", Georgia, serif;
+
+  /* Traffic lights */
+  --light-close: #ff5f57;
+  --light-min: #febc2e;
+  --light-max: #28c840;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
