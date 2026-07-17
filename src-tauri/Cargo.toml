@@ -1,0 +1,31 @@
+[package]
+name = "olimpo"
+version = "0.1.0"
+description = "Olimpo — desktop OS-style workspace for dev focus and organization"
+authors = ["Jairo da Matta"]
+edition = "2021"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "olimpo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+thiserror = "2"
+dunce = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
