@@ -15,7 +15,8 @@ Rodar após cada milestone, antes do commit final dele.
 ## M2 — Terminal
 - [ ] `Get-ChildItem -Recurse C:\Windows\System32` flui sem travar UI.
 - [ ] Ctrl+C interrompe; `git log` pagina; resize reflui.
-- [ ] Fechar janelas/app → sem conhost/OpenConsole órfão no Task Manager.
+- [x] Fechar janelas/app → sem pwsh/conhost órfão (verificado por máquina: 4→1 pwsh, 0 órfãos).
+- [x] pty spawna pwsh de verdade dentro do app (árvore de processos conferida).
 
 ## M3 — Arquivos
 - [ ] Criar/renomear/mover pasta e arquivo; F2; drag pra pasta.

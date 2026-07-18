@@ -1,4 +1,4 @@
-import { memo, useRef } from "react";
+import { Suspense, memo, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "motion/react";
 import { Minus, Plus, X } from "lucide-react";
@@ -160,7 +160,9 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
       </div>
 
       <div className="os-window__content grain">
-        <Content />
+        <Suspense fallback={null}>
+          <Content />
+        </Suspense>
       </div>
 
       {!win.maximized &&

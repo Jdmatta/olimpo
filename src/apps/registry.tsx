@@ -1,4 +1,5 @@
-import type { ComponentType, ReactNode } from "react";
+import { lazy } from "react";
+import type { ComponentType, LazyExoticComponent, ReactNode } from "react";
 import {
   FolderOpen,
   Mountain,
@@ -29,7 +30,7 @@ export interface AppMeta {
   id: AppId;
   title: string;
   icon: (size?: number) => ReactNode;
-  component: ComponentType;
+  component: ComponentType | LazyExoticComponent<ComponentType>;
   defaultSize: Size;
   minSize: Size;
   multiInstance: boolean;
@@ -54,9 +55,8 @@ const registry: Record<AppId, AppMeta> = {
     id: "terminal",
     title: "Terminal",
     icon: (size = 26) => <SquareTerminal size={size} strokeWidth={1.6} />,
-    component: () => (
-      <ComingSoon title="Terminal" hint="pwsh de verdade via ConPTY chega no M2." />
-    ),
+    // lazy: o xterm só entra no bundle quando o Terminal abre.
+    component: lazy(() => import("./terminal/TerminalApp")),
     defaultSize: { w: 840, h: 500 },
     minSize: { w: 480, h: 300 },
     multiInstance: true,
