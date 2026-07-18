@@ -15,6 +15,12 @@ pub enum Error {
     PathNotFound(String),
     #[error("falha ao mover para a Lixeira: {0}")]
     Trash(String),
+    #[error("erro de banco: {0}")]
+    Db(#[from] rusqlite::Error),
+    #[error("registro não encontrado")]
+    NotFound,
+    #[error("entrada inválida: {0}")]
+    InvalidInput(String),
     #[error("erro de IO: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -28,6 +34,9 @@ impl Error {
             Error::PathInvalid(_) => "path_invalid",
             Error::PathNotFound(_) => "path_not_found",
             Error::Trash(_) => "trash",
+            Error::Db(_) => "db",
+            Error::NotFound => "not_found",
+            Error::InvalidInput(_) => "invalid_input",
             Error::Io(_) => "io",
         }
     }

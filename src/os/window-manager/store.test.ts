@@ -7,6 +7,7 @@ function resetStore() {
     focusedId: null,
     nextZ: 1,
     nextInstance: 0,
+    savedLayouts: {},
   });
 }
 
@@ -105,5 +106,17 @@ describe("window manager store", () => {
     const rect = { x: 10, y: 40, w: 700, h: 500 };
     s().setRect(a, rect);
     expect(s().windows[a].rect).toEqual(rect);
+  });
+
+  it("open usa layout salvo quando existe (inclusive maximizado)", () => {
+    const rect = { x: 33, y: 66, w: 800, h: 500 };
+    s().hydrateLayouts({ files: { rect, maximized: true } });
+    const a = s().open("files");
+    expect(s().windows[a].rect).toEqual(rect);
+    expect(s().windows[a].maximized).toBe(true);
+    expect(s().windows[a].prevRect).toEqual(rect);
+    // Sem layout salvo: usa spawn default.
+    const b = s().open("github");
+    expect(s().windows[b].maximized).toBe(false);
   });
 });

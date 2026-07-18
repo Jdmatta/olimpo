@@ -2,12 +2,19 @@ import { create } from "zustand";
 import type { AppId, Rect, WindowPayload, WindowState } from "./types";
 import { getAppMeta } from "../../apps/registry";
 
+export interface SavedLayout {
+  rect: Rect;
+  maximized: boolean;
+}
+
 interface WindowManagerState {
   windows: Record<string, WindowState>;
   focusedId: string | null;
   nextZ: number;
   nextInstance: number;
+  savedLayouts: Record<string, SavedLayout>;
 
+  hydrateLayouts: (layouts: Record<string, SavedLayout>) => void;
   open: (appId: AppId, payload?: WindowPayload) => string;
   close: (id: string) => void;
   focus: (id: string) => void;
@@ -38,6 +45,9 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
   focusedId: null,
   nextZ: 1,
   nextInstance: 0,
+  savedLayouts: {},
+
+  hydrateLayouts: (layouts) => set({ savedLayouts: layouts }),
 
   open: (appId, payload) => {
     const state = get();
@@ -64,15 +74,16 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
       }
     }
 
+    const saved = state.savedLayouts[appId];
     const id = `${appId}-${state.nextInstance}`;
     const win: WindowState = {
       id,
       appId,
-      rect: spawnRect(appId, state.nextInstance),
+      rect: saved ? { ...saved.rect } : spawnRect(appId, state.nextInstance),
       z: state.nextZ,
       minimized: false,
-      maximized: false,
-      prevRect: null,
+      maximized: saved?.maximized ?? false,
+      prevRect: saved?.maximized ? { ...saved.rect } : null,
       payload,
     };
     set((s) => ({

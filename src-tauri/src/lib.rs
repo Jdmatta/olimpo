@@ -1,3 +1,4 @@
+mod db;
 mod error;
 mod fs;
 mod pty;
@@ -17,7 +18,8 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            app.manage(AppState::new());
+            let data_dir = app.path().app_data_dir()?;
+            app.manage(AppState::new(&data_dir)?);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -33,6 +35,23 @@ pub fn run() {
             fs::commands::fs_delete,
             fs::commands::fs_open_in_vscode,
             fs::commands::fs_reveal_in_explorer,
+            db::commands::settings_get,
+            db::commands::settings_set,
+            db::commands::todo_list,
+            db::commands::todo_add,
+            db::commands::todo_toggle,
+            db::commands::todo_delete,
+            db::commands::todo_reorder,
+            db::commands::todo_carry_over,
+            db::commands::pomodoro_start,
+            db::commands::pomodoro_finish,
+            db::commands::pomodoro_open_session,
+            db::commands::pomodoro_history,
+            db::commands::layout_save,
+            db::commands::layout_all,
+            db::commands::quicklink_add,
+            db::commands::quicklink_list,
+            db::commands::quicklink_delete,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

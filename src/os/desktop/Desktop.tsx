@@ -4,17 +4,33 @@ import WindowLayer from "../window-manager/WindowLayer";
 import MenuBar from "../menubar/MenuBar";
 import Dock from "../dock/Dock";
 import { useWindowStore } from "../window-manager/store";
+import {
+  hydrateLayouts,
+  startLayoutPersistence,
+} from "../window-manager/persistLayouts";
 
 function Desktop() {
-  // DEV: abre o terminal ao iniciar para inspecionar o shell sem cliques.
-  // Guard contra o double-effect do StrictMode (terminal é multi-instância).
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      const store = useWindowStore.getState();
-      if (Object.keys(store.windows).length === 0) {
-        store.open("terminal");
+    let stopPersistence: (() => void) | undefined;
+    let cancelled = false;
+
+    void hydrateLayouts().then(() => {
+      if (cancelled) return;
+      stopPersistence = startLayoutPersistence();
+      // DEV: abre o terminal ao iniciar para inspecionar sem cliques.
+      // Guard contra o double-effect do StrictMode.
+      if (import.meta.env.DEV) {
+        const store = useWindowStore.getState();
+        if (Object.keys(store.windows).length === 0) {
+          store.open("terminal");
+        }
       }
-    }
+    });
+
+    return () => {
+      cancelled = true;
+      stopPersistence?.();
+    };
   }, []);
   return (
     <div className="relative h-screen w-screen overflow-hidden">

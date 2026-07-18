@@ -94,3 +94,23 @@ export function fsOpenInVsCode(path: string): Promise<void> {
 export function fsRevealInExplorer(path: string): Promise<void> {
   return invoke("fs_reveal_in_explorer", { path });
 }
+
+// ---------- Layouts de janela ----------
+
+export interface WindowLayoutDto {
+  app_id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  maximized: boolean;
+}
+
+export function layoutSave(layout: WindowLayoutDto): Promise<void> {
+  const { app_id, ...rest } = layout;
+  return invoke("layout_save", { appId: app_id, ...rest });
+}
+
+export function layoutAll(): Promise<WindowLayoutDto[]> {
+  return invoke("layout_all");
+}

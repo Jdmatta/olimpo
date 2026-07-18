@@ -1,0 +1,492 @@
+//! Camada de repositório: TODO SQL do app vive aqui, sempre com params![].
+
+use rusqlite::{Connection, OptionalExtension, params};
+use serde::Serialize;
+
+use crate::error::{Error, Result};
+
+// ---------- settings ----------
+
+pub fn settings_get(conn: &Connection, key: &str) -> Result<Option<String>> {
+    conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        params![key],
+        |r| r.get(0),
+    )
+    .optional()
+    .map_err(Error::Db)
+}
+
+pub fn settings_set(conn: &Connection, key: &str, value: &str) -> Result<()> {
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, value],
+    )?;
+    Ok(())
+}
+
+// ---------- todos ----------
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct Todo {
+    pub id: i64,
+    pub title: String,
+    pub done: bool,
+    pub day: String,
+    pub sort_order: i64,
+}
+
+fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+pub fn todo_list(conn: &Connection, day: &str) -> Result<Vec<Todo>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, title, done, day, sort_order FROM todos
+         WHERE day = ?1 ORDER BY sort_order, id",
+    )?;
+    let rows = stmt
+        .query_map(params![day], |r| {
+            Ok(Todo {
+                id: r.get(0)?,
+                title: r.get(1)?,
+                done: r.get::<_, i64>(2)? != 0,
+                day: r.get(3)?,
+                sort_order: r.get(4)?,
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+pub fn todo_add(conn: &Connection, title: &str, day: &str) -> Result<Todo> {
+    let title = title.trim();
+    if title.is_empty() || title.len() > 500 {
+        return Err(Error::InvalidInput("título vazio ou longo demais".into()));
+    }
+    let next_order: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM todos WHERE day = ?1",
+        params![day],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO todos (title, done, day, sort_order, created_at)
+         VALUES (?1, 0, ?2, ?3, ?4)",
+        params![title, day, next_order, now_ms()],
+    )?;
+    let id = conn.last_insert_rowid();
+    Ok(Todo {
+        id,
+        title: title.to_string(),
+        done: false,
+        day: day.to_string(),
+        sort_order: next_order,
+    })
+}
+
+pub fn todo_toggle(conn: &Connection, id: i64) -> Result<bool> {
+    let done: Option<i64> = conn
+        .query_row("SELECT done FROM todos WHERE id = ?1", params![id], |r| {
+            r.get(0)
+        })
+        .optional()?;
+    let done = done.ok_or(Error::NotFound)? != 0;
+    let new_done = !done;
+    conn.execute(
+        "UPDATE todos SET done = ?2, completed_at = ?3 WHERE id = ?1",
+        params![id, new_done as i64, if new_done { Some(now_ms()) } else { None }],
+    )?;
+    Ok(new_done)
+}
+
+pub fn todo_delete(conn: &Connection, id: i64) -> Result<()> {
+    let changed = conn.execute("DELETE FROM todos WHERE id = ?1", params![id])?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+/// Reordena os todos de um dia conforme a lista de ids recebida.
+pub fn todo_reorder(conn: &Connection, day: &str, ids: &[i64]) -> Result<()> {
+    let tx_guard = conn.unchecked_transaction()?;
+    for (order, id) in ids.iter().enumerate() {
+        conn.execute(
+            "UPDATE todos SET sort_order = ?1 WHERE id = ?2 AND day = ?3",
+            params![order as i64, id, day],
+        )?;
+    }
+    tx_guard.commit()?;
+    Ok(())
+}
+
+/// Copia os não-feitos de `from_day` para `to_day` (carry-over do dia).
+pub fn todo_carry_over(conn: &Connection, from_day: &str, to_day: &str) -> Result<u32> {
+    let moved = conn.execute(
+        "UPDATE todos SET day = ?2,
+            sort_order = sort_order + (SELECT COALESCE(MAX(sort_order), -1) + 1
+                                       FROM todos WHERE day = ?2)
+         WHERE day = ?1 AND done = 0",
+        params![from_day, to_day],
+    )?;
+    Ok(moved as u32)
+}
+
+// ---------- pomodoro ----------
+
+#[derive(Debug, Serialize)]
+pub struct PomodoroSession {
+    pub id: i64,
+    pub kind: String,
+    pub planned_min: i64,
+    pub started_at: i64,
+    pub ended_at: Option<i64>,
+    pub completed: bool,
+}
+
+pub fn pomodoro_start(
+    conn: &Connection,
+    kind: &str,
+    planned_min: i64,
+    todo_id: Option<i64>,
+) -> Result<i64> {
+    if !matches!(kind, "focus" | "break") {
+        return Err(Error::InvalidInput("kind deve ser focus|break".into()));
+    }
+    if !(1..=180).contains(&planned_min) {
+        return Err(Error::InvalidInput("duração fora de 1..180 min".into()));
+    }
+    conn.execute(
+        "INSERT INTO pomodoro_sessions (kind, planned_min, started_at, todo_id)
+         VALUES (?1, ?2, ?3, ?4)",
+        params![kind, planned_min, now_ms(), todo_id],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn pomodoro_finish(conn: &Connection, id: i64, completed: bool) -> Result<()> {
+    let changed = conn.execute(
+        "UPDATE pomodoro_sessions SET ended_at = ?2, completed = ?3 WHERE id = ?1",
+        params![id, now_ms(), completed as i64],
+    )?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+/// Sessão de foco aberta (sem ended_at) — para restaurar após restart.
+pub fn pomodoro_open_session(conn: &Connection) -> Result<Option<PomodoroSession>> {
+    conn.query_row(
+        "SELECT id, kind, planned_min, started_at, ended_at, completed
+         FROM pomodoro_sessions WHERE ended_at IS NULL
+         ORDER BY started_at DESC LIMIT 1",
+        [],
+        |r| {
+            Ok(PomodoroSession {
+                id: r.get(0)?,
+                kind: r.get(1)?,
+                planned_min: r.get(2)?,
+                started_at: r.get(3)?,
+                ended_at: r.get(4)?,
+                completed: r.get::<_, i64>(5)? != 0,
+            })
+        },
+    )
+    .optional()
+    .map_err(Error::Db)
+}
+
+#[derive(Debug, Serialize)]
+pub struct DayStat {
+    pub day: String,
+    pub focus_completed: i64,
+    pub focus_minutes: i64,
+}
+
+/// Histórico agregado por dia (sessões de foco completas), últimos `days` dias.
+pub fn pomodoro_history(conn: &Connection, days: u32) -> Result<Vec<DayStat>> {
+    let days = days.min(90) as i64;
+    let since = now_ms() - days * 24 * 60 * 60 * 1000;
+    let mut stmt = conn.prepare(
+        "SELECT date(started_at / 1000, 'unixepoch', 'localtime') AS day,
+                COUNT(*) AS sessions,
+                SUM(planned_min) AS minutes
+         FROM pomodoro_sessions
+         WHERE kind = 'focus' AND completed = 1 AND started_at >= ?1
+         GROUP BY day ORDER BY day",
+    )?;
+    let rows = stmt
+        .query_map(params![since], |r| {
+            Ok(DayStat {
+                day: r.get(0)?,
+                focus_completed: r.get(1)?,
+                focus_minutes: r.get::<_, Option<i64>>(2)?.unwrap_or(0),
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+// ---------- window layouts ----------
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct WindowLayout {
+    pub app_id: String,
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+    pub maximized: bool,
+}
+
+pub fn layout_save(conn: &Connection, layout: &WindowLayout) -> Result<()> {
+    conn.execute(
+        "INSERT INTO window_layouts (app_id, x, y, w, h, maximized)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(app_id) DO UPDATE SET
+            x = excluded.x, y = excluded.y, w = excluded.w, h = excluded.h,
+            maximized = excluded.maximized",
+        params![
+            layout.app_id,
+            layout.x,
+            layout.y,
+            layout.w,
+            layout.h,
+            layout.maximized as i64
+        ],
+    )?;
+    Ok(())
+}
+
+pub fn layout_all(conn: &Connection) -> Result<Vec<WindowLayout>> {
+    let mut stmt =
+        conn.prepare("SELECT app_id, x, y, w, h, maximized FROM window_layouts")?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(WindowLayout {
+                app_id: r.get(0)?,
+                x: r.get(1)?,
+                y: r.get(2)?,
+                w: r.get(3)?,
+                h: r.get(4)?,
+                maximized: r.get::<_, i64>(5)? != 0,
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+// ---------- quick links ----------
+
+#[derive(Debug, Serialize)]
+pub struct QuickLink {
+    pub id: i64,
+    pub label: String,
+    pub url: String,
+    pub icon: Option<String>,
+    pub sort_order: i64,
+}
+
+/// Só http/https — o opener nunca recebe outra coisa.
+fn validate_link_url(url: &str) -> Result<()> {
+    let lower = url.to_ascii_lowercase();
+    if !(lower.starts_with("https://") || lower.starts_with("http://")) {
+        return Err(Error::InvalidInput("URL precisa ser http(s)".into()));
+    }
+    if url.len() > 2000 {
+        return Err(Error::InvalidInput("URL longa demais".into()));
+    }
+    Ok(())
+}
+
+pub fn quicklink_add(
+    conn: &Connection,
+    label: &str,
+    url: &str,
+    icon: Option<&str>,
+) -> Result<QuickLink> {
+    let label = label.trim();
+    if label.is_empty() || label.len() > 100 {
+        return Err(Error::InvalidInput("label vazio ou longo demais".into()));
+    }
+    validate_link_url(url)?;
+    let next_order: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM quick_links",
+        [],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO quick_links (label, url, icon, sort_order) VALUES (?1, ?2, ?3, ?4)",
+        params![label, url, icon, next_order],
+    )?;
+    Ok(QuickLink {
+        id: conn.last_insert_rowid(),
+        label: label.to_string(),
+        url: url.to_string(),
+        icon: icon.map(String::from),
+        sort_order: next_order,
+    })
+}
+
+pub fn quicklink_list(conn: &Connection) -> Result<Vec<QuickLink>> {
+    let mut stmt = conn
+        .prepare("SELECT id, label, url, icon, sort_order FROM quick_links ORDER BY sort_order, id")?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(QuickLink {
+                id: r.get(0)?,
+                label: r.get(1)?,
+                url: r.get(2)?,
+                icon: r.get(3)?,
+                sort_order: r.get(4)?,
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+pub fn quicklink_delete(conn: &Connection, id: i64) -> Result<()> {
+    let changed = conn.execute("DELETE FROM quick_links WHERE id = ?1", params![id])?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Db;
+
+    fn db() -> Db {
+        Db::open_in_memory().unwrap()
+    }
+
+    #[test]
+    fn settings_roundtrip_e_upsert() {
+        let db = db();
+        db.with(|c| {
+            assert_eq!(settings_get(c, "tema")?, None);
+            settings_set(c, "tema", "noite")?;
+            settings_set(c, "tema", "amanhecer")?;
+            assert_eq!(settings_get(c, "tema")?, Some("amanhecer".into()));
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn todos_crud_ordenacao_e_carry_over() {
+        let db = db();
+        db.with(|c| {
+            let a = todo_add(c, "estudar Rust", "2026-07-17")?;
+            let b = todo_add(c, "  revisar PR  ", "2026-07-17")?;
+            assert_eq!(b.title, "revisar PR");
+            assert_eq!(b.sort_order, 1);
+
+            assert!(todo_toggle(c, a.id)?);
+            let list = todo_list(c, "2026-07-17")?;
+            assert_eq!(list.len(), 2);
+            assert!(list[0].done);
+
+            todo_reorder(c, "2026-07-17", &[b.id, a.id])?;
+            let list = todo_list(c, "2026-07-17")?;
+            assert_eq!(list[0].id, b.id);
+
+            // Carry-over leva só o não-feito (b).
+            let moved = todo_carry_over(c, "2026-07-17", "2026-07-18")?;
+            assert_eq!(moved, 1);
+            assert_eq!(todo_list(c, "2026-07-18")?[0].id, b.id);
+            assert_eq!(todo_list(c, "2026-07-17")?.len(), 1);
+
+            todo_delete(c, a.id)?;
+            assert!(matches!(todo_delete(c, a.id), Err(Error::NotFound)));
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn todo_add_valida_input() {
+        let db = db();
+        db.with(|c| {
+            assert!(todo_add(c, "   ", "2026-07-17").is_err());
+            assert!(todo_add(c, &"x".repeat(501), "2026-07-17").is_err());
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn pomodoro_fluxo_e_historico() {
+        let db = db();
+        db.with(|c| {
+            assert!(pomodoro_start(c, "hack", 25, None).is_err());
+            assert!(pomodoro_start(c, "focus", 0, None).is_err());
+
+            let id = pomodoro_start(c, "focus", 25, None)?;
+            assert_eq!(pomodoro_open_session(c)?.map(|s| s.id), Some(id));
+
+            pomodoro_finish(c, id, true)?;
+            assert!(pomodoro_open_session(c)?.is_none());
+
+            let hist = pomodoro_history(c, 14)?;
+            assert_eq!(hist.len(), 1);
+            assert_eq!(hist[0].focus_completed, 1);
+            assert_eq!(hist[0].focus_minutes, 25);
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn layout_upsert_e_leitura() {
+        let db = db();
+        db.with(|c| {
+            let l1 = WindowLayout {
+                app_id: "files".into(),
+                x: 10.0,
+                y: 40.0,
+                w: 900.0,
+                h: 560.0,
+                maximized: false,
+            };
+            layout_save(c, &l1)?;
+            layout_save(
+                c,
+                &WindowLayout {
+                    x: 22.0,
+                    ..WindowLayout { app_id: "files".into(), x: 0.0, y: 40.0, w: 900.0, h: 560.0, maximized: true }
+                },
+            )?;
+            let all = layout_all(c)?;
+            assert_eq!(all.len(), 1);
+            assert_eq!(all[0].x, 22.0);
+            assert!(all[0].maximized);
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn quicklinks_validam_url() {
+        let db = db();
+        db.with(|c| {
+            assert!(quicklink_add(c, "LinkedIn", "https://linkedin.com/in/jdmatta", None).is_ok());
+            assert!(quicklink_add(c, "mal", "javascript:alert(1)", None).is_err());
+            assert!(quicklink_add(c, "mal", "file:///C:/Windows", None).is_err());
+            assert!(quicklink_add(c, "", "https://ok.com", None).is_err());
+            let list = quicklink_list(c)?;
+            assert_eq!(list.len(), 1);
+            quicklink_delete(c, list[0].id)?;
+            assert!(matches!(quicklink_delete(c, list[0].id), Err(Error::NotFound)));
+            Ok(())
+        })
+        .unwrap();
+    }
+}
