@@ -13,6 +13,9 @@ export interface Rect {
   h: number;
 }
 
+/** Parâmetros de abertura passados ao app (ex.: cwd do terminal). */
+export type WindowPayload = Record<string, unknown>;
+
 export interface WindowState {
   id: string;
   appId: AppId;
@@ -22,6 +25,7 @@ export interface WindowState {
   maximized: boolean;
   /** Rect antes de maximizar, para restaurar. */
   prevRect: Rect | null;
+  payload?: WindowPayload;
 }
 
 export interface Size {

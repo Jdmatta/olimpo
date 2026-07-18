@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { motion } from "motion/react";
 import { Minus, Plus, X } from "lucide-react";
 import { getAppMeta } from "../../apps/registry";
+import { WindowContext } from "./context";
 import { useWindowStore } from "./store";
 import type { Rect, WindowState } from "./types";
 import "./window.css";
@@ -160,9 +161,13 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
       </div>
 
       <div className="os-window__content grain">
-        <Suspense fallback={null}>
-          <Content />
-        </Suspense>
+        <WindowContext.Provider
+          value={{ windowId: win.id, isFocused, payload: win.payload }}
+        >
+          <Suspense fallback={null}>
+            <Content />
+          </Suspense>
+        </WindowContext.Provider>
       </div>
 
       {!win.maximized &&

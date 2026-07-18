@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AppId, Rect, WindowState } from "./types";
+import type { AppId, Rect, WindowPayload, WindowState } from "./types";
 import { getAppMeta } from "../../apps/registry";
 
 interface WindowManagerState {
@@ -8,7 +8,7 @@ interface WindowManagerState {
   nextZ: number;
   nextInstance: number;
 
-  open: (appId: AppId) => string;
+  open: (appId: AppId, payload?: WindowPayload) => string;
   close: (id: string) => void;
   focus: (id: string) => void;
   setRect: (id: string, rect: Rect) => void;
@@ -39,7 +39,7 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
   nextZ: 1,
   nextInstance: 0,
 
-  open: (appId) => {
+  open: (appId, payload) => {
     const state = get();
     const meta = getAppMeta(appId);
 
@@ -73,6 +73,7 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
       minimized: false,
       maximized: false,
       prevRect: null,
+      payload,
     };
     set((s) => ({
       windows: { ...s.windows, [id]: win },

@@ -46,3 +46,51 @@ export function ptyResize(id: number, cols: number, rows: number): Promise<void>
 export function ptyKill(id: number): Promise<void> {
   return invoke("pty_kill", { id });
 }
+
+// ---------- Arquivos ----------
+
+export interface FsEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+  modified_ms: number;
+}
+
+export interface FsListing {
+  path: string;
+  entries: FsEntry[];
+}
+
+export function fsList(path?: string): Promise<FsListing> {
+  return invoke("fs_list", { path: path ?? null });
+}
+
+export function fsCreateDir(parent: string, name: string): Promise<FsEntry> {
+  return invoke("fs_create_dir", { parent, name });
+}
+
+export function fsCreateFile(parent: string, name: string): Promise<FsEntry> {
+  return invoke("fs_create_file", { parent, name });
+}
+
+export function fsRename(path: string, newName: string): Promise<FsEntry> {
+  return invoke("fs_rename", { path, newName });
+}
+
+export function fsMove(path: string, targetDir: string): Promise<FsEntry> {
+  return invoke("fs_move", { path, targetDir });
+}
+
+/** Vai para a Lixeira — nunca deleta permanente (regra do projeto). */
+export function fsDelete(path: string): Promise<void> {
+  return invoke("fs_delete", { path });
+}
+
+export function fsOpenInVsCode(path: string): Promise<void> {
+  return invoke("fs_open_in_vscode", { path });
+}
+
+export function fsRevealInExplorer(path: string): Promise<void> {
+  return invoke("fs_reveal_in_explorer", { path });
+}

@@ -5,6 +5,7 @@ import "@xterm/xterm/css/xterm.css";
 import "./terminal.css";
 import { ptyKill, ptyResize, ptySpawn, ptyWrite } from "../../lib/ipc";
 import type { ShellProfile } from "../../lib/ipc";
+import { useWindowContext } from "../../os/window-manager/context";
 
 const PROFILES: { id: ShellProfile; label: string }[] = [
   { id: "pwsh", label: "pwsh 7" },
@@ -35,6 +36,9 @@ function makeTerminal(): Terminal {
 function TerminalApp() {
   const hostRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<{ term: Terminal; ptyId: number | null } | null>(null);
+  const { payload } = useWindowContext();
+  // "Abrir Terminal aqui" do app Arquivos passa o cwd pela janela.
+  const cwd = typeof payload?.cwd === "string" ? payload.cwd : undefined;
   const [profile, setProfile] = useState<ShellProfile>("pwsh");
   // generation muda quando o usuário troca o shell: derruba e recria a sessão.
   const [generation, setGeneration] = useState(0);
@@ -55,7 +59,7 @@ function TerminalApp() {
     let disposed = false;
 
     ptySpawn(
-      { profile, cols: term.cols, rows: term.rows },
+      { profile, cols: term.cols, rows: term.rows, cwd },
       (data) => term.write(data),
       () => {
         if (!disposed) {

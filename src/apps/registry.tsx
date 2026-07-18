@@ -43,9 +43,7 @@ const registry: Record<AppId, AppMeta> = {
     id: "files",
     title: "Arquivos",
     icon: (size = 26) => <FolderOpen size={size} strokeWidth={1.6} />,
-    component: () => (
-      <ComingSoon title="Arquivos" hint="O explorer real do workspace chega no M3." />
-    ),
+    component: lazy(() => import("./files/FileExplorer")),
     defaultSize: { w: 900, h: 560 },
     minSize: { w: 560, h: 360 },
     multiInstance: false,
