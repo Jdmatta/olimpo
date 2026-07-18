@@ -8,10 +8,12 @@ import {
   quicklinkList,
   settingsGet,
   settingsSet,
+  wallpaperImport,
   wallpaperList,
 } from "../../lib/ipc";
 import type { QuickLinkDto, WallpaperInfo } from "../../lib/ipc";
 import type { ShellProfile } from "../../lib/ipc";
+import { WALLPAPER_PRESETS } from "../../os/desktop/Wallpaper";
 import "./settings.css";
 
 function Section({
@@ -31,60 +33,92 @@ function Section({
 
 function WallpaperSection() {
   const [info, setInfo] = useState<WallpaperInfo | null>(null);
-  const [current, setCurrent] = useState<string>("");
+  const [currentFile, setCurrentFile] = useState<string>("");
+  const [preset, setPreset] = useState<string>("amanhecer");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const reloadFiles = () =>
     wallpaperList()
       .then(setInfo)
       .catch(() => {});
+
+  useEffect(() => {
+    void reloadFiles();
     settingsGet("wallpaper_file")
-      .then((v) => setCurrent(v ?? ""))
+      .then((v) => setCurrentFile(v ?? ""))
+      .catch(() => {});
+    settingsGet("wallpaper_preset")
+      .then((v) => setPreset(v || "amanhecer"))
       .catch(() => {});
   }, []);
 
-  function apply(file: string) {
-    setCurrent(file);
-    settingsSet("wallpaper_file", file).catch(() => {});
+  function notifyChanged() {
     window.dispatchEvent(new Event("olimpo:wallpaper-changed"));
+  }
+
+  function applyPreset(id: string) {
+    setPreset(id);
+    setCurrentFile("");
+    settingsSet("wallpaper_preset", id).catch(() => {});
+    settingsSet("wallpaper_file", "").catch(() => {});
+    notifyChanged();
+  }
+
+  function applyFile(file: string) {
+    setCurrentFile(file);
+    settingsSet("wallpaper_file", file).catch(() => {});
+    notifyChanged();
+  }
+
+  async function importImage() {
+    setError(null);
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Imagens", extensions: ["jpg", "jpeg", "png", "webp"] }],
+      });
+      if (typeof picked !== "string") return;
+      const name = await wallpaperImport(picked);
+      await reloadFiles();
+      applyFile(name);
+    } catch (err) {
+      setError(String((err as { message?: string })?.message ?? err));
+    }
   }
 
   return (
     <Section title="Wallpaper">
       <div className="set-wallpapers">
-        <button
-          className={`set-wall ${current === "" ? "set-wall--on" : ""}`}
-          onClick={() => apply("")}
-        >
-          <span className="set-wall__proc" />
-          Olimpo (padrão)
-        </button>
+        {WALLPAPER_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            className={`set-wall ${currentFile === "" && preset === p.id ? "set-wall--on" : ""}`}
+            onClick={() => applyPreset(p.id)}
+          >
+            <span className={`set-wall__proc set-wall__proc--${p.id}`} />
+            {p.label}
+          </button>
+        ))}
         {info?.files.map((file) => (
           <button
             key={file}
-            className={`set-wall ${current === file ? "set-wall--on" : ""}`}
-            onClick={() => apply(file)}
+            className={`set-wall ${currentFile === file ? "set-wall--on" : ""}`}
+            onClick={() => applyFile(file)}
             title={file}
           >
             <span className="set-wall__file">{file}</span>
           </button>
         ))}
+        <button className="set-wall set-wall--add" onClick={() => void importImage()}>
+          <span className="set-wall__proc set-wall__proc--add">
+            <Plus size={18} />
+          </span>
+          Adicionar imagem…
+        </button>
       </div>
-      <p className="set-note">
-        Jogue .jpg/.png em{" "}
-        <button
-          className="set-link"
-          onClick={() => {
-            // Pasta fica fora do workspace: abre direto pelo Explorer.
-            void import("@tauri-apps/plugin-opener")
-              .then((m) => m.revealItemInDir(info!.dir))
-              .catch(() => {});
-          }}
-          disabled={!info}
-        >
-          {info?.dir ?? "…"}
-        </button>{" "}
-        e eles aparecem aqui.
-      </p>
+      {error && <div className="set-error">{error}</div>}
     </Section>
   );
 }
@@ -241,11 +275,55 @@ function QuickLinksSection() {
   );
 }
 
+function AutostartSection() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void import("@tauri-apps/plugin-autostart")
+      .then((m) => m.isEnabled())
+      .then(setEnabled)
+      .catch(() => setEnabled(null));
+  }, []);
+
+  async function toggle() {
+    try {
+      const m = await import("@tauri-apps/plugin-autostart");
+      if (enabled) {
+        await m.disable();
+        setEnabled(false);
+      } else {
+        await m.enable();
+        setEnabled(true);
+      }
+    } catch {
+      // fora do Tauri
+    }
+  }
+
+  return (
+    <Section title="Inicialização">
+      <div className="set-row">
+        <span>Abrir o Olimpo junto com o Windows</span>
+        <button
+          role="switch"
+          aria-checked={enabled === true}
+          className={`set-switch ${enabled ? "set-switch--on" : ""}`}
+          onClick={() => void toggle()}
+          disabled={enabled === null}
+        >
+          <span className="set-switch__knob" />
+        </button>
+      </div>
+    </Section>
+  );
+}
+
 function SettingsApp() {
   return (
     <div className="set-app">
       <WallpaperSection />
       <TerminalSection />
+      <AutostartSection />
       <GithubSection />
       <QuickLinksSection />
       <Section title="Workspace">

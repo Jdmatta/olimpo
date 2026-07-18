@@ -146,6 +146,7 @@ pub struct PomodoroSession {
     pub started_at: i64,
     pub ended_at: Option<i64>,
     pub completed: bool,
+    pub todo_id: Option<i64>,
 }
 
 pub fn pomodoro_start(
@@ -182,7 +183,7 @@ pub fn pomodoro_finish(conn: &Connection, id: i64, completed: bool) -> Result<()
 /// Sessão de foco aberta (sem ended_at) — para restaurar após restart.
 pub fn pomodoro_open_session(conn: &Connection) -> Result<Option<PomodoroSession>> {
     conn.query_row(
-        "SELECT id, kind, planned_min, started_at, ended_at, completed
+        "SELECT id, kind, planned_min, started_at, ended_at, completed, todo_id
          FROM pomodoro_sessions WHERE ended_at IS NULL
          ORDER BY started_at DESC LIMIT 1",
         [],
@@ -194,6 +195,7 @@ pub fn pomodoro_open_session(conn: &Connection) -> Result<Option<PomodoroSession
                 started_at: r.get(3)?,
                 ended_at: r.get(4)?,
                 completed: r.get::<_, i64>(5)? != 0,
+                todo_id: r.get(6)?,
             })
         },
     )

@@ -70,6 +70,37 @@ function TerminalApp() {
     sessionRef.current = session;
     let disposed = false;
 
+    const pasteClipboard = () => {
+      void navigator.clipboard.readText().then((text) => {
+        if (text && session.ptyId != null) {
+          ptyWrite(session.ptyId, text).catch(() => {});
+        }
+      });
+    };
+    // Clipboard estilo Windows Terminal: Ctrl+V cola; Ctrl+C com seleção
+    // copia (sem seleção segue como interrupt); Ctrl+Shift+C copia sempre.
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== "keydown") return true;
+      const key = e.key.toLowerCase();
+      if (e.ctrlKey && key === "v") {
+        pasteClipboard();
+        return false;
+      }
+      if (e.ctrlKey && key === "c" && (e.shiftKey || term.hasSelection())) {
+        const selection = term.getSelection();
+        if (selection) void navigator.clipboard.writeText(selection);
+        term.clearSelection();
+        return false;
+      }
+      return true;
+    });
+    // Botão direito: cola (padrão de terminal no Windows).
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      pasteClipboard();
+    };
+    host.addEventListener("contextmenu", onContextMenu);
+
     ptySpawn(
       { profile, cols: term.cols, rows: term.rows, cwd },
       (data) => term.write(data),
@@ -118,6 +149,7 @@ function TerminalApp() {
       disposed = true;
       window.clearTimeout(resizeTimer);
       observer.disconnect();
+      host.removeEventListener("contextmenu", onContextMenu);
       dataSub.dispose();
       if (session.ptyId != null) {
         ptyKill(session.ptyId).catch(() => {});

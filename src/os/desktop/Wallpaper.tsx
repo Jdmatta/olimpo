@@ -2,13 +2,25 @@ import { useEffect, useState } from "react";
 import { settingsGet } from "../../lib/ipc";
 import "./wallpaper.css";
 
-function useCustomWallpaper(): string | null {
+export const WALLPAPER_PRESETS = [
+  { id: "amanhecer", label: "Amanhecer" },
+  { id: "noite", label: "Noite" },
+  { id: "tempestade", label: "Tempestade" },
+  { id: "egeu", label: "Egeu" },
+] as const;
+
+function useWallpaperConfig(): { src: string | null; preset: string } {
   const [src, setSrc] = useState<string | null>(null);
+  const [preset, setPreset] = useState("amanhecer");
 
   useEffect(() => {
     async function load() {
       try {
-        const file = await settingsGet("wallpaper_file");
+        const [file, savedPreset] = await Promise.all([
+          settingsGet("wallpaper_file"),
+          settingsGet("wallpaper_preset"),
+        ]);
+        setPreset(savedPreset || "amanhecer");
         if (!file) {
           setSrc(null);
           return;
@@ -26,7 +38,7 @@ function useCustomWallpaper(): string | null {
     return () => window.removeEventListener("olimpo:wallpaper-changed", load);
   }, []);
 
-  return src;
+  return { src, preset };
 }
 
 /**
@@ -35,19 +47,19 @@ function useCustomWallpaper(): string | null {
  * Imagem custom do usuário (Ajustes) substitui as camadas procedurais.
  */
 function Wallpaper() {
-  const custom = useCustomWallpaper();
+  const { src, preset } = useWallpaperConfig();
 
-  if (custom) {
+  if (src) {
     return (
       <div className="wallpaper" aria-hidden>
-        <img className="wallpaper__image" src={custom} alt="" />
+        <img className="wallpaper__image" src={src} alt="" />
         <div className="wallpaper__vignette" />
       </div>
     );
   }
 
   return (
-    <div className="wallpaper" aria-hidden>
+    <div className="wallpaper" data-preset={preset} aria-hidden>
       <div className="wallpaper__sky" />
       <div className="wallpaper__stars" />
       <div className="wallpaper__glow" />

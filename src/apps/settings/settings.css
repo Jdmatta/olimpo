@@ -95,6 +95,38 @@
   font-size: 12px;
 }
 
+.set-switch {
+  position: relative;
+  width: 34px;
+  height: 19px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.set-switch--on {
+  background: rgba(217, 180, 91, 0.45);
+  border-color: var(--glass-border-focus);
+}
+.set-switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.set-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--marble);
+  transition: transform 0.2s ease;
+}
+.set-switch--on .set-switch__knob {
+  transform: translateX(15px);
+}
+
 /* wallpapers */
 
 .set-wallpapers {
@@ -130,6 +162,32 @@
   background:
     radial-gradient(80% 70% at 50% 105%, rgba(201, 134, 107, 0.6), transparent 65%),
     linear-gradient(180deg, #070b18, #1a2342 75%, #3d4e8d);
+}
+.set-wall__proc--noite {
+  background:
+    radial-gradient(80% 70% at 50% 105%, rgba(96, 118, 190, 0.5), transparent 65%),
+    linear-gradient(180deg, #04060f, #0c1230 75%, #1b2650);
+}
+.set-wall__proc--tempestade {
+  background:
+    radial-gradient(80% 70% at 50% 105%, rgba(168, 106, 224, 0.6), transparent 65%),
+    linear-gradient(180deg, #0a0714, #241744 75%, #45307e);
+}
+.set-wall__proc--egeu {
+  background:
+    radial-gradient(80% 70% at 50% 105%, rgba(94, 200, 190, 0.55), transparent 65%),
+    linear-gradient(180deg, #041016, #0c3448 75%, #14566b);
+}
+.set-wall__proc--add {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed var(--glass-border);
+  color: var(--text-tertiary);
+}
+.set-wall--add:hover .set-wall__proc--add {
+  color: var(--laurel-bright);
+  border-color: var(--glass-border-focus);
 }
 
 .set-wall__file {

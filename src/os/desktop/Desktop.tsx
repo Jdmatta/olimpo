@@ -15,6 +15,27 @@ import {
 } from "../window-manager/persistLayouts";
 
 function Desktop() {
+  // F11: tela cheia de verdade (esconde a taskbar — vira "OS" mesmo).
+  useEffect(() => {
+    async function toggleFullscreen() {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const win = getCurrentWindow();
+        await win.setFullscreen(!(await win.isFullscreen()));
+      } catch {
+        // fora do Tauri: nada a fazer
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "F11") {
+        e.preventDefault();
+        void toggleFullscreen();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   useEffect(() => {
     let stopPersistence: (() => void) | undefined;
     let cancelled = false;

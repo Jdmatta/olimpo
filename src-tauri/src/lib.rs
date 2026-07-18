@@ -16,6 +16,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -64,6 +69,7 @@ pub fn run() {
             github::commands::github_assigned,
             github::commands::github_commits,
             wallpaper::wallpaper_list,
+            wallpaper::wallpaper_import,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

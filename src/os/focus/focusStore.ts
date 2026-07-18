@@ -73,13 +73,13 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
         kind: open.kind,
         startedAt: open.started_at,
         plannedMin: open.planned_min,
-        todoId: null,
+        todoId: open.todo_id,
       };
       if (isDone(session, Date.now())) {
         // Correu o tempo todo com o app fechado: conta como completa.
         await pomodoroFinish(session.dbId, true).catch(() => {});
       } else {
-        set({ session });
+        set({ session, currentTodoId: open.todo_id });
       }
     } catch {
       // Fora do Tauri: segue com defaults, sem sessão.

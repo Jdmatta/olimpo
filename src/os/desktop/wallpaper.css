@@ -13,23 +13,65 @@
   object-fit: cover;
 }
 
+/* Presets procedurais: cada um redefine as cores do céu/brilho. */
+.wallpaper {
+  --wp-halo: rgba(201, 134, 107, 0.5);
+  --wp-mid: rgba(138, 123, 184, 0.34);
+  --wp-low: rgba(61, 78, 141, 0.25);
+  --wp-a: var(--olympus-night);
+  --wp-b: var(--olympus-deep);
+  --wp-c: var(--olympus-dusk);
+  --wp-d: var(--olympus-horizon);
+  --wp-glow: rgba(217, 180, 91, 0.16);
+}
+.wallpaper[data-preset="noite"] {
+  --wp-halo: rgba(96, 118, 190, 0.28);
+  --wp-mid: rgba(52, 66, 120, 0.3);
+  --wp-low: rgba(24, 32, 64, 0.3);
+  --wp-a: #04060f;
+  --wp-b: #070b1c;
+  --wp-c: #0c1230;
+  --wp-d: #1b2650;
+  --wp-glow: rgba(150, 170, 240, 0.1);
+}
+.wallpaper[data-preset="tempestade"] {
+  --wp-halo: rgba(168, 106, 224, 0.42);
+  --wp-mid: rgba(112, 78, 190, 0.32);
+  --wp-low: rgba(60, 44, 110, 0.3);
+  --wp-a: #0a0714;
+  --wp-b: #140e26;
+  --wp-c: #241744;
+  --wp-d: #45307e;
+  --wp-glow: rgba(196, 150, 255, 0.18);
+}
+.wallpaper[data-preset="egeu"] {
+  --wp-halo: rgba(94, 200, 190, 0.4);
+  --wp-mid: rgba(56, 140, 150, 0.3);
+  --wp-low: rgba(30, 84, 100, 0.28);
+  --wp-a: #041016;
+  --wp-b: #072030;
+  --wp-c: #0c3448;
+  --wp-d: #14566b;
+  --wp-glow: rgba(120, 220, 200, 0.16);
+}
+
 .wallpaper__sky {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(
       120% 90% at 50% 108%,
-      rgba(201, 134, 107, 0.5) 0%,
-      rgba(138, 123, 184, 0.34) 26%,
-      rgba(61, 78, 141, 0.25) 48%,
+      var(--wp-halo) 0%,
+      var(--wp-mid) 26%,
+      var(--wp-low) 48%,
       transparent 70%
     ),
     linear-gradient(
       180deg,
-      var(--olympus-night) 0%,
-      var(--olympus-deep) 42%,
-      var(--olympus-dusk) 78%,
-      var(--olympus-horizon) 100%
+      var(--wp-a) 0%,
+      var(--wp-b) 42%,
+      var(--wp-c) 78%,
+      var(--wp-d) 100%
     );
 }
 
@@ -69,11 +111,7 @@
   bottom: 16%;
   width: 34vw;
   height: 30vh;
-  background: radial-gradient(
-    50% 50% at 50% 50%,
-    rgba(217, 180, 91, 0.16) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(50% 50% at 50% 50%, var(--wp-glow) 0%, transparent 70%);
   filter: blur(10px);
 }
 

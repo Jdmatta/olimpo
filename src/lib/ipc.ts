@@ -225,6 +225,7 @@ export interface PomodoroSession {
   started_at: number;
   ended_at: number | null;
   completed: boolean;
+  todo_id: number | null;
 }
 
 export interface DayStat {
@@ -308,6 +309,11 @@ export interface WallpaperInfo {
 
 export function wallpaperList(): Promise<WallpaperInfo> {
   return invoke("wallpaper_list");
+}
+
+/** Copia uma imagem escolhida no dialog nativo pra pasta de wallpapers. */
+export function wallpaperImport(source: string): Promise<string> {
+  return invoke("wallpaper_import", { source });
 }
 
 // ---------- Settings ----------
