@@ -25,14 +25,16 @@ Rodar após cada milestone, antes do commit final dele.
 - [ ] Ataques: `..\..`, caminho absoluto fora do root, junction → rejeitados.
 
 ## M4 — Foco
-- [ ] Pomodoro completo dispara toast; chip no menubar conta.
-- [ ] Matar app no meio do pomodoro → relaunch restaura estado são.
-- [ ] Todos e layouts de janela sobrevivem restart.
+- [ ] Pomodoro completo dispara toast; chip no menubar conta; auto-inicia pausa.
+- [ ] Matar app no meio do pomodoro → relaunch restaura estado são (sessão vencida = completa).
+- [ ] Todos e layouts de janela sobrevivem restart; "← ontem" traz não-feitos.
+- [ ] Modo imersivo cobre tudo durante foco; sair/encerrar funcionam.
 
 ## M5 — GitHub
-- [ ] PAT no Credential Manager (conferir UI do Windows); ausente de repo/db/localStorage/devtools.
+- [ ] Conectar PAT fine-grained → perfil aparece; PAT no Credential Manager (conferir UI do Windows); ausente de repo/db/localStorage/devtools.
 - [ ] Revogar token no GitHub → app mostra reconectar, sem crash.
-- [ ] Offline → banner + dados em cache.
+- [ ] Repos listam; clique → commits; issues/PRs abrem no navegador.
+- [ ] Offline → banner amarelo, sem crash.
 
 ## M6 — Spotlight/snap/settings
 - [ ] Ctrl+Space → "ter" → Enter abre Terminal.
