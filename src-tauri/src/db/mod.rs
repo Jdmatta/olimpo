@@ -1,5 +1,5 @@
 mod migrations;
-mod repos;
+pub(crate) mod repos;
 
 pub mod commands;
 

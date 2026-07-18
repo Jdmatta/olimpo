@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use crate::db::Db;
 use crate::fs::PathGuard;
+use crate::github::{GithubClient, TtlCache};
 use crate::pty::PtyRegistry;
 
 pub struct AppState {
@@ -9,6 +11,8 @@ pub struct AppState {
     pub workspace_root: PathBuf,
     pub guard: PathGuard,
     pub db: Db,
+    pub github: GithubClient,
+    pub github_cache: TtlCache,
 }
 
 impl AppState {
@@ -22,6 +26,8 @@ impl AppState {
             workspace_root,
             guard,
             db,
+            github: GithubClient::new(),
+            github_cache: TtlCache::new(Duration::from_secs(300)),
         })
     }
 }

@@ -114,3 +114,165 @@ export function layoutSave(layout: WindowLayoutDto): Promise<void> {
 export function layoutAll(): Promise<WindowLayoutDto[]> {
   return invoke("layout_all");
 }
+
+// ---------- GitHub ----------
+
+export interface GhUser {
+  login: string;
+  name: string | null;
+  avatar_url: string;
+  html_url: string;
+  public_repos: number;
+  followers: number;
+}
+
+export interface GhRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  html_url: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  pushed_at: string | null;
+  private: boolean;
+}
+
+export interface GhIssueItem {
+  id: number;
+  number: number;
+  title: string;
+  html_url: string;
+  state: string;
+  repository_url: string;
+  pull_request?: unknown;
+}
+
+export interface GhSearchIssues {
+  total_count: number;
+  items: GhIssueItem[];
+}
+
+export interface GhCommit {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    author: { name: string | null; date: string | null } | null;
+  };
+}
+
+export interface GithubStatus {
+  connected: boolean;
+  login: string | null;
+}
+
+export interface GithubOverview {
+  user: GhUser;
+  repos: GhRepo[];
+  rate_remaining: number | null;
+}
+
+export function githubStatus(): Promise<GithubStatus> {
+  return invoke("github_status");
+}
+
+/** Token vai UMA vez pro Rust, que valida e guarda no Credential Manager. */
+export function githubConnect(token: string): Promise<GhUser> {
+  return invoke("github_connect", { token });
+}
+
+export function githubDisconnect(): Promise<void> {
+  return invoke("github_disconnect");
+}
+
+export function githubOverview(force = false): Promise<GithubOverview> {
+  return invoke("github_overview", { force });
+}
+
+export function githubAssigned(force = false): Promise<GhSearchIssues> {
+  return invoke("github_assigned", { force });
+}
+
+export function githubCommits(fullName: string, force = false): Promise<GhCommit[]> {
+  return invoke("github_commits", { fullName, force });
+}
+
+// ---------- Foco (todos + pomodoro) ----------
+
+export interface Todo {
+  id: number;
+  title: string;
+  done: boolean;
+  day: string;
+  sort_order: number;
+}
+
+export interface PomodoroSession {
+  id: number;
+  kind: "focus" | "break";
+  planned_min: number;
+  started_at: number;
+  ended_at: number | null;
+  completed: boolean;
+}
+
+export interface DayStat {
+  day: string;
+  focus_completed: number;
+  focus_minutes: number;
+}
+
+export function todoList(day: string): Promise<Todo[]> {
+  return invoke("todo_list", { day });
+}
+
+export function todoAdd(title: string, day: string): Promise<Todo> {
+  return invoke("todo_add", { title, day });
+}
+
+export function todoToggle(id: number): Promise<boolean> {
+  return invoke("todo_toggle", { id });
+}
+
+export function todoDelete(id: number): Promise<void> {
+  return invoke("todo_delete", { id });
+}
+
+export function todoReorder(day: string, ids: number[]): Promise<void> {
+  return invoke("todo_reorder", { day, ids });
+}
+
+export function todoCarryOver(fromDay: string, toDay: string): Promise<number> {
+  return invoke("todo_carry_over", { fromDay, toDay });
+}
+
+export function pomodoroStart(
+  kind: "focus" | "break",
+  plannedMin: number,
+  todoId?: number,
+): Promise<number> {
+  return invoke("pomodoro_start", { kind, plannedMin, todoId: todoId ?? null });
+}
+
+export function pomodoroFinish(id: number, completed: boolean): Promise<void> {
+  return invoke("pomodoro_finish", { id, completed });
+}
+
+export function pomodoroOpenSession(): Promise<PomodoroSession | null> {
+  return invoke("pomodoro_open_session");
+}
+
+export function pomodoroHistory(days: number): Promise<DayStat[]> {
+  return invoke("pomodoro_history", { days });
+}
+
+// ---------- Settings ----------
+
+export function settingsGet(key: string): Promise<string | null> {
+  return invoke("settings_get", { key });
+}
+
+export function settingsSet(key: string, value: string): Promise<void> {
+  return invoke("settings_set", { key, value });
+}

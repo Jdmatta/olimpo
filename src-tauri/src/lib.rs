@@ -1,7 +1,9 @@
 mod db;
 mod error;
 mod fs;
+mod github;
 mod pty;
+mod secrets;
 mod state;
 
 use tauri::Manager;
@@ -52,6 +54,12 @@ pub fn run() {
             db::commands::quicklink_add,
             db::commands::quicklink_list,
             db::commands::quicklink_delete,
+            github::commands::github_status,
+            github::commands::github_connect,
+            github::commands::github_disconnect,
+            github::commands::github_overview,
+            github::commands::github_assigned,
+            github::commands::github_commits,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

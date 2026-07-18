@@ -17,6 +17,16 @@ pub enum Error {
     Trash(String),
     #[error("erro de banco: {0}")]
     Db(#[from] rusqlite::Error),
+    #[error("falha no cofre de credenciais: {0}")]
+    Keyring(String),
+    #[error("GitHub: não conectado ou token inválido")]
+    GithubAuth,
+    #[error("GitHub: rate limit atingido — tenta de novo em alguns minutos")]
+    GithubRate,
+    #[error("GitHub: {0}")]
+    Github(String),
+    #[error("rede: {0}")]
+    Network(String),
     #[error("registro não encontrado")]
     NotFound,
     #[error("entrada inválida: {0}")]
@@ -35,6 +45,11 @@ impl Error {
             Error::PathNotFound(_) => "path_not_found",
             Error::Trash(_) => "trash",
             Error::Db(_) => "db",
+            Error::Keyring(_) => "keyring",
+            Error::GithubAuth => "github_auth",
+            Error::GithubRate => "github_rate",
+            Error::Github(_) => "github",
+            Error::Network(_) => "network",
             Error::NotFound => "not_found",
             Error::InvalidInput(_) => "invalid_input",
             Error::Io(_) => "io",
