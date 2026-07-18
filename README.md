@@ -1,75 +1,77 @@
 <div align="center">
 
-<img src="src-tauri/icons/master.png" width="110" alt="Ícone do Olimpo" />
+<img src="src-tauri/icons/master.png" width="110" alt="Olimpo icon" />
 
 # Olimpo
 
-**Um "sistema operacional" pessoal para foco e organização no trabalho dev.**
+**A personal "operating system" for developer focus and organization.**
 
-Shell desktop estilo macOS/Win11 com glassmorfismo — janelas, dock, Spotlight — e apps de verdade por dentro: terminal ConPTY, explorer do workspace, pomodoro e dashboard do GitHub.
+A macOS/Win11-style desktop shell with glassmorphism — windows, dock, Spotlight — running real apps inside: a native ConPTY terminal, a workspace file explorer, a pomodoro timer and a GitHub dashboard.
 
 Tauri 2 (Rust) · React 19 + TypeScript · Windows 11
 
+[Download installer](https://github.com/Jdmatta/olimpo/releases/latest) · [Leia em português](README.pt-BR.md)
+
 </div>
 
-![Desktop do Olimpo](docs/img/desktop.png)
+![Olimpo demo](docs/img/demo.gif)
 
 ## Apps
 
-| App | O que faz de verdade |
+| App | What it actually does |
 |---|---|
-| **Terminal** | pwsh 7 / PowerShell / cmd reais via **ConPTY** (`portable-pty` + xterm.js); streaming por Tauri **Channels com payload raw** — aguenta `Get-ChildItem -Recurse` sem engasgar; zero `conhost` órfão ao fechar |
-| **Arquivos** | Explorer do workspace: navegar, criar, renomear, mover (drag & drop), **deletar só para a Lixeira**, abrir no VS Code, "Abrir Terminal aqui" |
-| **Foco** | Pomodoro por **timestamps** (sobrevive a restart no meio da sessão), tarefas do dia com carry-over, modo **imersivo** que cobre o desktop, toast nativo, histórico de 14 dias |
-| **GitHub** | Dashboard via API oficial: repos, issues/PRs atribuídos, commits; PAT guardado no **Windows Credential Manager** — nunca em arquivo, banco ou frontend |
-| **Ajustes** | Wallpaper (procedural ou imagens suas), shell padrão, quick links, conexão GitHub |
+| **Terminal** | Real pwsh 7 / PowerShell / cmd over **ConPTY** (`portable-pty` + xterm.js); output streams through Tauri **Channels with raw payloads** — survives `Get-ChildItem -Recurse` without choking; zero orphaned `conhost` on close |
+| **Files** | Workspace explorer: browse, create, rename, move (drag & drop), **delete to Recycle Bin only**, open in VS Code, "Open Terminal here" — scoped to allowed roots by a path guard |
+| **Focus** | **Timestamp-based** pomodoro (survives an app restart mid-session), daily tasks with carry-over, an **immersive mode** that covers the whole desktop, native toasts, 14-day history |
+| **GitHub** | Dashboard over the official API: repos, assigned issues/PRs, commits; the PAT lives in the **Windows Credential Manager** — never in a file, database or the frontend |
+| **Settings** | Wallpapers (procedural presets or your own images), default shell, quick links, GitHub connection, autostart |
 
-Shell: janelas arrastáveis/redimensionáveis com traffic lights, dock com magnify, menubar com chip do pomodoro, **Spotlight** (`Ctrl+Space`) com fuzzy search, snap de bordas com preview.
+Shell: draggable/resizable windows with traffic lights, dock with magnification, menubar with a pomodoro chip, **Spotlight** (`Ctrl+Space`) with fuzzy search, edge snapping with preview, F11 true fullscreen.
 
-## Arquitetura
+## Architecture
 
 ```
-React (WebView2) ── invoke tipado (src/lib/ipc.ts, superfície única)
+React (WebView2) ── typed invoke surface (src/lib/ipc.ts, single entry point)
         │
-   Tauri 2 (Rust) ─┬─ pty/      ConPTY via portable-pty; threads reader+waiter
-                   ├─ fs/       path_guard: canonicalize + starts_with(root)
-                   ├─ db/       rusqlite + migrations por user_version
-                   ├─ github/   reqwest + DTOs; cache TTL 5 min
+   Tauri 2 (Rust) ─┬─ pty/      ConPTY via portable-pty; reader + waiter threads
+                   ├─ fs/       path_guard: canonicalize + starts_with(allowed roots)
+                   ├─ db/       rusqlite + user_version migrations
+                   ├─ github/   reqwest + hand-written DTOs; 5-min TTL cache
                    └─ secrets/  keyring → Windows Credential Manager
 ```
 
-Decisões que valem leitura:
+Decisions worth reading:
 
-- **Vidro garantido**: janela nativa opaca; wallpaper e blur são DOM (`backdrop-filter`) — sem depender do acrílico instável do DWM.
-- **Janelas minimizadas continuam montadas** (`inert` + animação): o xterm sobrevive minimizado com a sessão viva.
-- **EOF do ConPTY no Windows** só chega depois de dropar o master: thread *waiter* espera o processo, drena com quiescência e só então fecha — sem perder output, sem vazar console host.
+- **Guaranteed glass**: the native window is opaque; the wallpaper and blur are DOM (`backdrop-filter`) — no dependency on Windows' flaky DWM acrylic.
+- **Minimized windows stay mounted** (`inert` + animation): the terminal survives minimization with its session alive.
+- **ConPTY EOF on Windows** only arrives after the master is dropped: a *waiter* thread reaps the process, drains with a quiescence window and only then closes — no lost output, no leaked console hosts.
 
-## Segurança
+## Security
 
-- Todo acesso a arquivo passa por `path_guard.rs`: canonicalização (`dunce`), `starts_with(root)`, nomes reservados do Windows — testado contra `..\..`, caminho absoluto e **escape por junction**.
-- Delete é sempre `trash::delete` (Lixeira). Processos só com `Command` + lista de argumentos.
-- PAT do GitHub: entra uma vez, é validado, vai pro Credential Manager via `keyring` e as chamadas saem do lado Rust. Mensagens de erro **sanitizam tokens**.
-- SQL 100% parametrizado numa camada de repositório; CSP restritiva; capabilities mínimas (opener limitado a `https://**`).
+- Every filesystem access goes through `path_guard.rs`: canonicalization (`dunce`), `starts_with` against allowed roots, Windows reserved names — tested against `..\..`, absolute paths and **junction escapes**.
+- Deletion is always `trash::delete` (Recycle Bin). Processes spawn via `Command` + argument lists, never shell strings.
+- GitHub PAT: entered once, validated, stored via `keyring`, and all API calls happen on the Rust side. Error messages **sanitize tokens**.
+- 100% parameterized SQL behind a repository layer; strict CSP; minimal capabilities (opener restricted to `https://**`).
 
-## Testes
+## Tests
 
-`cargo test` (25) + `vitest` (39): guard de caminhos, ConPTY real (spawn/kill/exit), migrations, repos SQL, engine do pomodoro com clock injetado, window manager, fuzzy do Spotlight, zonas de snap.
+`cargo test` (26) + `vitest` (40): path guard, real ConPTY (spawn/kill/exit), migrations, SQL repositories, pomodoro engine with an injected clock, window manager, Spotlight fuzzy matching, snap zones.
 
-## Rodar
+## Run
 
 ```powershell
 npm install
-npm run tauri dev      # primeira compilação Rust demora alguns minutos
+npm run tauri dev      # first Rust build takes a few minutes
 ```
 
-Pré-requisitos: Node 20+, Rust stable-msvc, VS Build Tools (C++), WebView2 (nativo no Win11).
+Prerequisites: Node 20+, Rust stable-msvc, VS Build Tools (C++), WebView2 (built into Win11).
 
-Instalador: `npm run tauri build` → NSIS em `src-tauri/target/release/bundle/nsis/`. Sem assinatura de código — o SmartScreen vai pedir "Mais informações → Executar assim mesmo".
+Installer: `npm run tauri build` → NSIS at `src-tauri/target/release/bundle/nsis/`, or grab it from [Releases](https://github.com/Jdmatta/olimpo/releases). Unsigned build — SmartScreen will ask for "More info → Run anyway".
 
 ## Roadmap
 
-v1.1: watcher de arquivos (`notify`), abas no terminal, troca de raiz do workspace, restaurar da Lixeira, autostart.
+v1.2: file watcher (`notify`), terminal tabs, configurable workspace root, restore from Recycle Bin.
 
-## Licença
+## License
 
 [MIT](LICENSE) — Jairo da Matta
