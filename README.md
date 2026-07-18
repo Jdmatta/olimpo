@@ -22,7 +22,8 @@ Tauri 2 (Rust) · React 19 + TypeScript · Windows 11
 |---|---|
 | **Terminal** | Real pwsh 7 / PowerShell / cmd over **ConPTY** (`portable-pty` + xterm.js); output streams through Tauri **Channels with raw payloads** — survives `Get-ChildItem -Recurse` without choking; zero orphaned `conhost` on close |
 | **Files** | Workspace explorer: browse, create, rename, move (drag & drop), **delete to Recycle Bin only**, open in VS Code, "Open Terminal here" — scoped to allowed roots by a path guard |
-| **Focus** | **Timestamp-based** pomodoro (survives an app restart mid-session), daily tasks with carry-over, an **immersive mode** that covers the whole desktop, native toasts, 14-day history |
+| **Focus** | **Timestamp-based** pomodoro (survives an app restart mid-session) with study techniques (25/5, 52/17, 90/20) and a **long break every 4 cycles**, daily tasks with carry-over, an **immersive mode** that covers the whole desktop, native toasts, 14-day history |
+| **App launcher** | Auto-detects installed browsers and editors (Brave, Chrome, Edge, Firefox, VS Code, Cursor, Zed) and lets you register any executable — launched from the dock or Spotlight, validated and spawned with argument lists |
 | **GitHub** | Dashboard over the official API: repos, assigned issues/PRs, commits; the PAT lives in the **Windows Credential Manager** — never in a file, database or the frontend |
 | **Settings** | Wallpapers (procedural presets or your own images), default shell, quick links, GitHub connection, autostart |
 
