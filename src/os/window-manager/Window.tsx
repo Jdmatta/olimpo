@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 import { Minus, Plus, X } from "lucide-react";
 import { getAppMeta } from "../../apps/registry";
 import { WindowContext } from "./context";
+import { rectForZone, zoneForPointer } from "./snap";
+import type { SnapZone } from "./snap";
 import { useWindowStore } from "./store";
 import type { Rect, WindowState } from "./types";
 import "./window.css";
@@ -41,11 +43,14 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
   const toggleMaximize = useWindowStore((s) => s.toggleMaximize);
   const isFocused = useWindowStore((s) => s.focusedId === win.id);
 
+  const setSnapPreview = useWindowStore((s) => s.setSnapPreview);
+
   const gesture = useRef<{
     startX: number;
     startY: number;
     rect: Rect;
     dir: ResizeDir | "move";
+    zone: SnapZone;
   } | null>(null);
 
   function beginGesture(
@@ -59,6 +64,7 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
       startY: e.clientY,
       rect: win.rect,
       dir,
+      zone: null,
     };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
@@ -72,6 +78,13 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
 
     if (g.dir === "move") {
       el.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      const zone = zoneForPointer(e.clientX, e.clientY, window.innerWidth);
+      if (zone !== g.zone) {
+        g.zone = zone;
+        setSnapPreview(
+          zone ? rectForZone(zone, window.innerWidth, window.innerHeight) : null,
+        );
+      }
       return;
     }
     const next = resizedRect(g.rect, g.dir, dx, dy, meta.minSize.w, meta.minSize.h);
@@ -89,6 +102,20 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
     const dx = e.clientX - g.startX;
     const dy = e.clientY - g.startY;
     el.style.transform = "";
+    setSnapPreview(null);
+
+    if (g.dir === "move" && g.zone) {
+      if (g.zone === "top") {
+        // Soltar no topo = maximizar (com o rect original para restaurar).
+        if (!win.maximized) toggleMaximize(win.id);
+        return;
+      }
+      setRect(
+        win.id,
+        rectForZone(g.zone, window.innerWidth, window.innerHeight),
+      );
+      return;
+    }
 
     const next =
       g.dir === "move"

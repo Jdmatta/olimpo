@@ -23,7 +23,6 @@ function GithubMark({ size = 26 }: { size?: number }) {
   );
 }
 import type { AppId, Size } from "../os/window-manager/types";
-import ComingSoon from "./ComingSoon";
 import AboutApp from "./about/AboutApp";
 
 export interface AppMeta {
@@ -84,9 +83,7 @@ const registry: Record<AppId, AppMeta> = {
     id: "settings",
     title: "Ajustes",
     icon: (size = 26) => <Settings size={size} strokeWidth={1.6} />,
-    component: () => (
-      <ComingSoon title="Ajustes" hint="Wallpaper, shells e conexões no M6." />
-    ),
+    component: lazy(() => import("./settings/SettingsApp")),
     defaultSize: { w: 720, h: 520 },
     minSize: { w: 520, h: 400 },
     multiInstance: false,

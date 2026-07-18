@@ -267,6 +267,39 @@ export function pomodoroHistory(days: number): Promise<DayStat[]> {
   return invoke("pomodoro_history", { days });
 }
 
+// ---------- Quick links ----------
+
+export interface QuickLinkDto {
+  id: number;
+  label: string;
+  url: string;
+  icon: string | null;
+  sort_order: number;
+}
+
+export function quicklinkList(): Promise<QuickLinkDto[]> {
+  return invoke("quicklink_list");
+}
+
+export function quicklinkAdd(label: string, url: string): Promise<QuickLinkDto> {
+  return invoke("quicklink_add", { label, url, icon: null });
+}
+
+export function quicklinkDelete(id: number): Promise<void> {
+  return invoke("quicklink_delete", { id });
+}
+
+// ---------- Wallpapers ----------
+
+export interface WallpaperInfo {
+  dir: string;
+  files: string[];
+}
+
+export function wallpaperList(): Promise<WallpaperInfo> {
+  return invoke("wallpaper_list");
+}
+
 // ---------- Settings ----------
 
 export function settingsGet(key: string): Promise<string | null> {

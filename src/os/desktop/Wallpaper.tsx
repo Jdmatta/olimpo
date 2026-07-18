@@ -1,10 +1,51 @@
+import { useEffect, useState } from "react";
+import { settingsGet } from "../../lib/ipc";
 import "./wallpaper.css";
+
+function useCustomWallpaper(): string | null {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const file = await settingsGet("wallpaper_file");
+        if (!file) {
+          setSrc(null);
+          return;
+        }
+        const { appDataDir, join } = await import("@tauri-apps/api/path");
+        const { convertFileSrc } = await import("@tauri-apps/api/core");
+        const full = await join(await appDataDir(), "wallpapers", file);
+        setSrc(convertFileSrc(full));
+      } catch {
+        setSrc(null);
+      }
+    }
+    void load();
+    window.addEventListener("olimpo:wallpaper-changed", load);
+    return () => window.removeEventListener("olimpo:wallpaper-changed", load);
+  }, []);
+
+  return src;
+}
 
 /**
  * Wallpaper procedural "amanhecer no Olimpo" — gradientes em camadas,
  * montanhas em SVG e estrelas. Zero assets externos, zero licença.
+ * Imagem custom do usuário (Ajustes) substitui as camadas procedurais.
  */
 function Wallpaper() {
+  const custom = useCustomWallpaper();
+
+  if (custom) {
+    return (
+      <div className="wallpaper" aria-hidden>
+        <img className="wallpaper__image" src={custom} alt="" />
+        <div className="wallpaper__vignette" />
+      </div>
+    );
+  }
+
   return (
     <div className="wallpaper" aria-hidden>
       <div className="wallpaper__sky" />

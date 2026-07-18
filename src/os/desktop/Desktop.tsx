@@ -4,6 +4,9 @@ import WindowLayer from "../window-manager/WindowLayer";
 import MenuBar from "../menubar/MenuBar";
 import Dock from "../dock/Dock";
 import FocusOverlay from "../focus/FocusOverlay";
+import SnapPreview from "../window-manager/SnapPreview";
+import Spotlight from "../spotlight/Spotlight";
+import QuickLinks from "./QuickLinks";
 import { startFocusTicker, useFocusStore } from "../focus/focusStore";
 import { useWindowStore } from "../window-manager/store";
 import {
@@ -41,9 +44,12 @@ function Desktop() {
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <Wallpaper />
+      <QuickLinks />
+      <SnapPreview />
       <WindowLayer />
       <MenuBar />
       <Dock />
+      <Spotlight />
       <FocusOverlay />
     </div>
   );

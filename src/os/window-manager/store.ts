@@ -13,8 +13,11 @@ interface WindowManagerState {
   nextZ: number;
   nextInstance: number;
   savedLayouts: Record<string, SavedLayout>;
+  /** Retângulo de preview durante drag perto de borda (snap). */
+  snapPreview: Rect | null;
 
   hydrateLayouts: (layouts: Record<string, SavedLayout>) => void;
+  setSnapPreview: (rect: Rect | null) => void;
   open: (appId: AppId, payload?: WindowPayload) => string;
   close: (id: string) => void;
   focus: (id: string) => void;
@@ -46,8 +49,12 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
   nextZ: 1,
   nextInstance: 0,
   savedLayouts: {},
+  snapPreview: null,
 
   hydrateLayouts: (layouts) => set({ savedLayouts: layouts }),
+
+  setSnapPreview: (rect) =>
+    set((s) => (s.snapPreview === rect ? s : { snapPreview: rect })),
 
   open: (appId, payload) => {
     const state = get();

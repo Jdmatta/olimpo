@@ -3,9 +3,13 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import "./terminal.css";
-import { ptyKill, ptyResize, ptySpawn, ptyWrite } from "../../lib/ipc";
+import { ptyKill, ptyResize, ptySpawn, ptyWrite, settingsGet } from "../../lib/ipc";
 import type { ShellProfile } from "../../lib/ipc";
 import { useWindowContext } from "../../os/window-manager/context";
+
+function isProfile(v: string | null): v is ShellProfile {
+  return v === "pwsh" || v === "powershell" || v === "cmd";
+}
 
 const PROFILES: { id: ShellProfile; label: string }[] = [
   { id: "pwsh", label: "pwsh 7" },
@@ -39,13 +43,20 @@ function TerminalApp() {
   const { payload } = useWindowContext();
   // "Abrir Terminal aqui" do app Arquivos passa o cwd pela janela.
   const cwd = typeof payload?.cwd === "string" ? payload.cwd : undefined;
-  const [profile, setProfile] = useState<ShellProfile>("pwsh");
+  const [profile, setProfile] = useState<ShellProfile | null>(null);
   // generation muda quando o usuário troca o shell: derruba e recria a sessão.
   const [generation, setGeneration] = useState(0);
 
+  // Shell padrão vem dos Ajustes; só spawna depois de resolver.
+  useEffect(() => {
+    settingsGet("default_shell")
+      .then((v) => setProfile(isProfile(v) ? v : "pwsh"))
+      .catch(() => setProfile("pwsh"));
+  }, []);
+
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) return;
+    if (!host || profile === null) return;
 
     const term = makeTerminal();
     const fit = new FitAddon();
@@ -115,7 +126,7 @@ function TerminalApp() {
     };
     // profile entra via generation: trocar shell recria a sessão inteira.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generation]);
+  }, [generation, profile === null]);
 
   function switchProfile(next: ShellProfile) {
     if (next === profile) return;
@@ -128,7 +139,7 @@ function TerminalApp() {
       <div className="terminal-toolbar">
         <select
           className="terminal-profile"
-          value={profile}
+          value={profile ?? "pwsh"}
           onChange={(e) => switchProfile(e.target.value as ShellProfile)}
           title="Trocar shell (recria a sessão)"
         >

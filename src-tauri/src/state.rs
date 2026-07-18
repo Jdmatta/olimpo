@@ -13,6 +13,7 @@ pub struct AppState {
     pub db: Db,
     pub github: GithubClient,
     pub github_cache: TtlCache,
+    pub wallpapers_dir: PathBuf,
 }
 
 impl AppState {
@@ -21,6 +22,8 @@ impl AppState {
         let workspace_root = fallback_workspace();
         let guard = PathGuard::new(&workspace_root)?;
         let db = Db::open(app_data_dir)?;
+        let wallpapers_dir = app_data_dir.join("wallpapers");
+        std::fs::create_dir_all(&wallpapers_dir)?;
         Ok(Self {
             ptys: PtyRegistry::new(),
             workspace_root,
@@ -28,6 +31,7 @@ impl AppState {
             db,
             github: GithubClient::new(),
             github_cache: TtlCache::new(Duration::from_secs(300)),
+            wallpapers_dir,
         })
     }
 }

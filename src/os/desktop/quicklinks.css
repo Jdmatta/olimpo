@@ -1,0 +1,30 @@
+.quicklinks {
+  position: absolute;
+  top: calc(var(--menubar-height) + 18px);
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 500;
+}
+
+.quicklinks__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 7px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 180px;
+}
+.quicklinks__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quicklinks__item:hover {
+  color: var(--laurel-bright);
+  background: rgba(255, 255, 255, 0.1);
+}

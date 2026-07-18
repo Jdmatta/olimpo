@@ -5,6 +5,7 @@ mod github;
 mod pty;
 mod secrets;
 mod state;
+mod wallpaper;
 
 use tauri::Manager;
 
@@ -61,6 +62,7 @@ pub fn run() {
             github::commands::github_overview,
             github::commands::github_assigned,
             github::commands::github_commits,
+            wallpaper::wallpaper_list,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

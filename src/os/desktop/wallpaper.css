@@ -5,6 +5,14 @@
   background: var(--olympus-night);
 }
 
+.wallpaper__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .wallpaper__sky {
   position: absolute;
   inset: 0;
