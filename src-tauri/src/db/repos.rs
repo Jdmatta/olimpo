@@ -360,6 +360,125 @@ pub fn quicklink_delete(conn: &Connection, id: i64) -> Result<()> {
     Ok(())
 }
 
+// ---------- external apps ----------
+
+#[derive(Debug, Serialize)]
+pub struct ExternalApp {
+    pub id: i64,
+    pub label: String,
+    pub command: String,
+    pub args: String,
+    pub icon: String,
+    pub sort_order: i64,
+}
+
+/// Comando precisa ser um executável absoluto EXISTENTE — nunca string de shell.
+fn validate_app_command(command: &str) -> Result<()> {
+    let path = std::path::Path::new(command);
+    if !path.is_absolute() {
+        return Err(Error::InvalidInput("caminho do executável precisa ser absoluto".into()));
+    }
+    let ext = path
+        .extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    if !matches!(ext.as_str(), "exe" | "cmd" | "bat") {
+        return Err(Error::InvalidInput("só executáveis .exe/.cmd/.bat".into()));
+    }
+    if !path.is_file() {
+        return Err(Error::PathNotFound(command.to_string()));
+    }
+    Ok(())
+}
+
+pub fn extapp_add(
+    conn: &Connection,
+    label: &str,
+    command: &str,
+    args: &str,
+    icon: &str,
+) -> Result<ExternalApp> {
+    let label = label.trim();
+    if label.is_empty() || label.len() > 60 {
+        return Err(Error::InvalidInput("nome vazio ou longo demais".into()));
+    }
+    validate_app_command(command)?;
+    if args.len() > 500 {
+        return Err(Error::InvalidInput("args longos demais".into()));
+    }
+    let icon = if matches!(icon, "globe" | "code" | "app") { icon } else { "app" };
+    let next_order: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM external_apps",
+        [],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO external_apps (label, command, args, icon, sort_order)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![label, command, args, icon, next_order],
+    )?;
+    Ok(ExternalApp {
+        id: conn.last_insert_rowid(),
+        label: label.to_string(),
+        command: command.to_string(),
+        args: args.to_string(),
+        icon: icon.to_string(),
+        sort_order: next_order,
+    })
+}
+
+pub fn extapp_list(conn: &Connection) -> Result<Vec<ExternalApp>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, label, command, args, icon, sort_order
+         FROM external_apps ORDER BY sort_order, id",
+    )?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(ExternalApp {
+                id: r.get(0)?,
+                label: r.get(1)?,
+                command: r.get(2)?,
+                args: r.get(3)?,
+                icon: r.get(4)?,
+                sort_order: r.get(5)?,
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+pub fn extapp_get(conn: &Connection, id: i64) -> Result<ExternalApp> {
+    conn.query_row(
+        "SELECT id, label, command, args, icon, sort_order FROM external_apps WHERE id = ?1",
+        params![id],
+        |r| {
+            Ok(ExternalApp {
+                id: r.get(0)?,
+                label: r.get(1)?,
+                command: r.get(2)?,
+                args: r.get(3)?,
+                icon: r.get(4)?,
+                sort_order: r.get(5)?,
+            })
+        },
+    )
+    .optional()?
+    .ok_or(Error::NotFound)
+}
+
+pub fn extapp_delete(conn: &Connection, id: i64) -> Result<()> {
+    let changed = conn.execute("DELETE FROM external_apps WHERE id = ?1", params![id])?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub fn extapp_count(conn: &Connection) -> Result<i64> {
+    conn.query_row("SELECT COUNT(*) FROM external_apps", [], |r| r.get(0))
+        .map_err(Error::Db)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -470,6 +589,32 @@ mod tests {
             assert_eq!(all.len(), 1);
             assert_eq!(all[0].x, 22.0);
             assert!(all[0].maximized);
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn extapps_validam_comando() {
+        let db = db();
+        db.with(|c| {
+            // cmd.exe existe em qualquer Windows — comando válido de teste.
+            let cmd = "C:\\Windows\\System32\\cmd.exe";
+            let app = extapp_add(c, "CMD", cmd, "", "app")?;
+            assert_eq!(app.icon, "app");
+            assert_eq!(extapp_count(c)?, 1);
+            assert_eq!(extapp_get(c, app.id)?.command, cmd);
+
+            // relativos, extensão errada, inexistente, ícone inválido vira 'app'
+            assert!(extapp_add(c, "x", "cmd.exe", "", "app").is_err());
+            assert!(extapp_add(c, "x", "C:\\Windows\\System32\\kernel32.dll", "", "app").is_err());
+            assert!(extapp_add(c, "x", "C:\\nao-existe\\app.exe", "", "app").is_err());
+            assert!(extapp_add(c, "", cmd, "", "app").is_err());
+            let weird = extapp_add(c, "Weird", cmd, "", "banana")?;
+            assert_eq!(weird.icon, "app");
+
+            extapp_delete(c, app.id)?;
+            assert!(matches!(extapp_get(c, app.id), Err(Error::NotFound)));
             Ok(())
         })
         .unwrap();

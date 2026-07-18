@@ -1,5 +1,6 @@
 mod db;
 mod error;
+mod extapps;
 mod fs;
 mod github;
 mod pty;
@@ -28,7 +29,9 @@ pub fn run() {
         )
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
-            app.manage(AppState::new(&data_dir)?);
+            let state = AppState::new(&data_dir)?;
+            extapps::seed_if_empty(&state);
+            app.manage(state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -70,6 +73,11 @@ pub fn run() {
             github::commands::github_commits,
             wallpaper::wallpaper_list,
             wallpaper::wallpaper_import,
+            extapps::extapp_list,
+            extapps::extapp_add,
+            extapps::extapp_delete,
+            extapps::extapp_detect,
+            extapps::extapp_launch,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

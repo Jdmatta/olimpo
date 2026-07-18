@@ -3,7 +3,7 @@ pub(crate) mod repos;
 
 pub mod commands;
 
-pub use repos::{DayStat, PomodoroSession, QuickLink, Todo, WindowLayout};
+pub use repos::{DayStat, ExternalApp, PomodoroSession, QuickLink, Todo, WindowLayout};
 
 use std::path::Path;
 use std::sync::Mutex;

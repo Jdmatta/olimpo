@@ -41,6 +41,21 @@ export function nextKind(kind: SessionKind): SessionKind {
   return kind === "focus" ? "break" : "focus";
 }
 
+/**
+ * Pausa curta ou longa? Clássico: a cada `longEvery` focos completos,
+ * a pausa é longa. `focusCompleted` = total de focos já completados
+ * (o que acabou de fechar incluído).
+ */
+export function breakForCycle(
+  focusCompleted: number,
+  longEvery = 4,
+): "short" | "long" {
+  if (longEvery <= 0) return "short";
+  return focusCompleted > 0 && focusCompleted % longEvery === 0
+    ? "long"
+    : "short";
+}
+
 /** mm:ss para o timer e o chip do menubar. */
 export function formatRemaining(session: ActiveSession, now: number): string {
   const totalSeconds = Math.ceil(remainingMs(session, now) / 1000);

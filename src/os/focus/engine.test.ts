@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  breakForCycle,
   formatRemaining,
   isDone,
   nextKind,
@@ -41,6 +42,16 @@ describe("engine do pomodoro (clock injetado)", () => {
   it("ciclo focus→break→focus", () => {
     expect(nextKind("focus")).toBe("break");
     expect(nextKind("break")).toBe("focus");
+  });
+
+  it("pausa longa a cada 4 focos completos", () => {
+    expect(breakForCycle(1)).toBe("short");
+    expect(breakForCycle(3)).toBe("short");
+    expect(breakForCycle(4)).toBe("long");
+    expect(breakForCycle(5)).toBe("short");
+    expect(breakForCycle(8)).toBe("long");
+    expect(breakForCycle(0)).toBe("short");
+    expect(breakForCycle(4, 0)).toBe("short");
   });
 
   it("formata mm:ss com padding", () => {

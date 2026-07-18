@@ -11,7 +11,7 @@ import {
 } from "../../lib/ipc";
 import type { DayStat, Todo } from "../../lib/ipc";
 import { formatRemaining, progress } from "../../os/focus/engine";
-import { useFocusStore } from "../../os/focus/focusStore";
+import { TECHNIQUES, useFocusStore } from "../../os/focus/focusStore";
 import "./focus.css";
 
 function localDay(offsetDays = 0): string {
@@ -82,6 +82,51 @@ function TimerRing() {
   );
 }
 
+function CycleDots() {
+  const cycleCount = useFocusStore((s) => s.cycleCount);
+  const filled = cycleCount % 4;
+  return (
+    <div
+      className="focus-cycle"
+      title={`${filled}/4 focos até a pausa longa`}
+    >
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className={`focus-cycle__dot ${i < filled ? "focus-cycle__dot--on" : ""}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TechniqueChips() {
+  const durations = useFocusStore((s) => s.durations);
+  const setDurations = useFocusStore((s) => s.setDurations);
+  const running = useFocusStore((s) => s.session !== null);
+
+  return (
+    <div className="focus-techniques">
+      {TECHNIQUES.map((t) => {
+        const active =
+          durations.focus === t.durations.focus &&
+          durations.break === t.durations.break;
+        return (
+          <button
+            key={t.id}
+            className={`focus-chip ${active ? "focus-chip--on" : ""}`}
+            disabled={running}
+            onClick={() => setDurations(t.durations)}
+            title={`Foco ${t.durations.focus}m · pausa ${t.durations.break}m · longa ${t.durations.longBreak}m`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function DurationControls() {
   const durations = useFocusStore((s) => s.durations);
   const setDurations = useFocusStore((s) => s.setDurations);
@@ -122,6 +167,28 @@ function DurationControls() {
           <button
             disabled={running}
             onClick={() => setDurations({ ...durations, break: durations.break + 1 })}
+          >
+            +
+          </button>
+        </div>
+      </label>
+      <label className="focus-config__item">
+        Longa
+        <div className="focus-stepper">
+          <button
+            disabled={running}
+            onClick={() =>
+              setDurations({ ...durations, longBreak: durations.longBreak - 5 })
+            }
+          >
+            −
+          </button>
+          <span>{durations.longBreak}m</span>
+          <button
+            disabled={running}
+            onClick={() =>
+              setDurations({ ...durations, longBreak: durations.longBreak + 5 })
+            }
           >
             +
           </button>
@@ -302,6 +369,8 @@ function FocusApp() {
   return (
     <div className="focus-app">
       <TimerRing />
+      <CycleDots />
+      <TechniqueChips />
       <DurationControls />
       <TodoSection />
       <History />

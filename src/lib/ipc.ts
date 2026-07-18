@@ -316,6 +316,43 @@ export function wallpaperImport(source: string): Promise<string> {
   return invoke("wallpaper_import", { source });
 }
 
+// ---------- Apps externos ----------
+
+export interface ExternalApp {
+  id: number;
+  label: string;
+  command: string;
+  args: string;
+  icon: "globe" | "code" | "app";
+  sort_order: number;
+}
+
+export function extappList(): Promise<ExternalApp[]> {
+  return invoke("extapp_list");
+}
+
+export function extappAdd(
+  label: string,
+  command: string,
+  args: string,
+  icon: string,
+): Promise<ExternalApp> {
+  return invoke("extapp_add", { label, command, args, icon });
+}
+
+export function extappDelete(id: number): Promise<void> {
+  return invoke("extapp_delete", { id });
+}
+
+/** Redetecta navegadores/editores instalados. */
+export function extappDetect(): Promise<ExternalApp[]> {
+  return invoke("extapp_detect");
+}
+
+export function extappLaunch(id: number): Promise<void> {
+  return invoke("extapp_launch", { id });
+}
+
 // ---------- Settings ----------
 
 export function settingsGet(key: string): Promise<string | null> {

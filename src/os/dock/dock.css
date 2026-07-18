@@ -53,3 +53,10 @@
   background: var(--laurel);
   box-shadow: 0 0 6px var(--laurel);
 }
+
+.dock__separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 6px 3px 10px;
+  background: var(--glass-border);
+}

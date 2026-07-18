@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CornerDownLeft, Link as LinkIcon, Play, Search, Square } from "lucide-react";
 import { listAllApps } from "../../apps/registry";
-import { quicklinkList } from "../../lib/ipc";
-import type { QuickLinkDto } from "../../lib/ipc";
+import { extappLaunch, extappList, quicklinkList } from "../../lib/ipc";
+import type { ExternalApp, QuickLinkDto } from "../../lib/ipc";
+import { extAppIcon } from "../dock/Dock";
 import { useFocusStore } from "../focus/focusStore";
 import { useWindowStore } from "../window-manager/store";
 import { rankItems } from "./fuzzy";
@@ -27,6 +28,7 @@ function Spotlight() {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const [links, setLinks] = useState<QuickLinkDto[]>([]);
+  const [extapps, setExtapps] = useState<ExternalApp[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const openWindow = useWindowStore((s) => s.open);
@@ -53,6 +55,9 @@ function Spotlight() {
       quicklinkList()
         .then(setLinks)
         .catch(() => setLinks([]));
+      extappList()
+        .then(setExtapps)
+        .catch(() => setExtapps([]));
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
@@ -92,8 +97,15 @@ function Spotlight() {
       icon: <LinkIcon size={15} />,
       run: () => openExternal(l.url),
     }));
-    return [...apps, ...actions, ...linkItems];
-  }, [links, focusSession, openWindow]);
+    const extItems: Item[] = extapps.map((a) => ({
+      key: `ext:${a.id}`,
+      label: a.label,
+      hint: "abrir programa",
+      icon: extAppIcon(a.icon, 15),
+      run: () => void extappLaunch(a.id).catch(() => {}),
+    }));
+    return [...apps, ...extItems, ...actions, ...linkItems];
+  }, [links, extapps, focusSession, openWindow]);
 
   const results = useMemo(
     () => rankItems(query, items, (i) => i.label),

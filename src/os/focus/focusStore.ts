@@ -6,14 +6,28 @@ import {
   settingsGet,
   settingsSet,
 } from "../../lib/ipc";
-import { isDone } from "./engine";
+import { breakForCycle, isDone } from "./engine";
 import type { ActiveSession, SessionKind } from "./engine";
 import { notify } from "./notify";
 
 interface Durations {
   focus: number;
   break: number;
+  longBreak: number;
 }
+
+export interface Technique {
+  id: string;
+  label: string;
+  durations: Durations;
+}
+
+/** Técnicas de estudo prontas — pausa longa entra a cada 4 focos. */
+export const TECHNIQUES: Technique[] = [
+  { id: "classic", label: "25 · 5", durations: { focus: 25, break: 5, longBreak: 15 } },
+  { id: "52-17", label: "52 · 17", durations: { focus: 52, break: 17, longBreak: 17 } },
+  { id: "ultradian", label: "90 · 20", durations: { focus: 90, break: 20, longBreak: 30 } },
+];
 
 interface FocusStoreState {
   session: ActiveSession | null;
@@ -22,6 +36,8 @@ interface FocusStoreState {
   immersive: boolean;
   currentTodoId: number | null;
   hydrated: boolean;
+  /** Focos completados no ciclo atual (persiste; pausa longa a cada 4). */
+  cycleCount: number;
 
   restore: () => Promise<void>;
   start: (kind: SessionKind) => Promise<void>;
@@ -33,12 +49,16 @@ interface FocusStoreState {
   setCurrentTodo: (id: number | null) => void;
 }
 
-const DEFAULTS: Durations = { focus: 25, break: 5 };
+const DEFAULTS: Durations = { focus: 25, break: 5, longBreak: 15 };
 
 function clampDurations(d: Durations): Durations {
   return {
     focus: Math.min(180, Math.max(1, Math.round(d.focus) || DEFAULTS.focus)),
     break: Math.min(60, Math.max(1, Math.round(d.break) || DEFAULTS.break)),
+    longBreak: Math.min(
+      60,
+      Math.max(1, Math.round(d.longBreak) || DEFAULTS.longBreak),
+    ),
   };
 }
 
@@ -48,22 +68,27 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
   immersive: false,
   currentTodoId: null,
   hydrated: false,
+  cycleCount: 0,
 
   restore: async () => {
     if (get().hydrated) return;
     set({ hydrated: true });
     try {
-      const [focusMin, breakMin, immersive] = await Promise.all([
+      const [focusMin, breakMin, longMin, immersive, cycle] = await Promise.all([
         settingsGet("pomodoro_focus_min"),
         settingsGet("pomodoro_break_min"),
+        settingsGet("pomodoro_long_min"),
         settingsGet("focus_immersive"),
+        settingsGet("pomodoro_cycle"),
       ]);
       set({
         durations: clampDurations({
           focus: Number(focusMin) || DEFAULTS.focus,
           break: Number(breakMin) || DEFAULTS.break,
+          longBreak: Number(longMin) || DEFAULTS.longBreak,
         }),
         immersive: immersive === "1",
+        cycleCount: Math.max(0, Number(cycle) || 0),
       });
 
       const open = await pomodoroOpenSession();
@@ -87,9 +112,14 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
   },
 
   start: async (kind) => {
-    const { durations, currentTodoId, session } = get();
+    const { durations, currentTodoId, session, cycleCount } = get();
     if (session) return;
-    const plannedMin = kind === "focus" ? durations.focus : durations.break;
+    const plannedMin =
+      kind === "focus"
+        ? durations.focus
+        : breakForCycle(cycleCount) === "long"
+          ? durations.longBreak
+          : durations.break;
     const todoId = kind === "focus" ? currentTodoId : null;
     const dbId = await pomodoroStart(kind, plannedMin, todoId ?? undefined);
     set({
@@ -118,7 +148,14 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
     await pomodoroFinish(session.dbId, true).catch(() => {});
 
     if (session.kind === "focus") {
-      notify("Foco completo ⚡", "Boa. Pausa curta agora.");
+      const cycleCount = get().cycleCount + 1;
+      set({ cycleCount });
+      settingsSet("pomodoro_cycle", String(cycleCount)).catch(() => {});
+      const long = breakForCycle(cycleCount) === "long";
+      notify(
+        "Foco completo ⚡",
+        long ? "4 ciclos fechados — pausa LONGA merecida." : "Boa. Pausa curta agora.",
+      );
       await get().start("break").catch(() => {});
     } else {
       notify("Pausa encerrada", "Pronto para o próximo foco?");
@@ -130,6 +167,7 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
     set({ durations });
     settingsSet("pomodoro_focus_min", String(durations.focus)).catch(() => {});
     settingsSet("pomodoro_break_min", String(durations.break)).catch(() => {});
+    settingsSet("pomodoro_long_min", String(durations.longBreak)).catch(() => {});
   },
 
   setImmersive: (on) => {

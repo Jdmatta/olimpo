@@ -95,6 +95,56 @@
   color: #ffb0ab;
 }
 
+/* ---------- ciclo + técnicas ---------- */
+
+.focus-cycle {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  margin-top: -6px;
+}
+.focus-cycle__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+.focus-cycle__dot--on {
+  background: var(--laurel);
+  box-shadow: 0 0 5px rgba(217, 180, 91, 0.5);
+}
+
+.focus-techniques {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.focus-chip {
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.focus-chip:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+.focus-chip--on {
+  border-color: var(--glass-border-focus);
+  background: rgba(217, 180, 91, 0.14);
+  color: var(--laurel-bright);
+}
+.focus-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------- config ---------- */
 
 .focus-config {

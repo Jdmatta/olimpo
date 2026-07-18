@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { FolderOpen, Plus, Trash2 } from "lucide-react";
 import {
+  extappAdd,
+  extappDelete,
+  extappDetect,
+  extappList,
   githubDisconnect,
   githubStatus,
   quicklinkAdd,
@@ -11,7 +15,8 @@ import {
   wallpaperImport,
   wallpaperList,
 } from "../../lib/ipc";
-import type { QuickLinkDto, WallpaperInfo } from "../../lib/ipc";
+import type { ExternalApp, QuickLinkDto, WallpaperInfo } from "../../lib/ipc";
+import { extAppIcon } from "../../os/dock/Dock";
 import type { ShellProfile } from "../../lib/ipc";
 import { WALLPAPER_PRESETS } from "../../os/desktop/Wallpaper";
 import "./settings.css";
@@ -275,6 +280,145 @@ function QuickLinksSection() {
   );
 }
 
+function ExternalAppsSection() {
+  const [apps, setApps] = useState<ExternalApp[]>([]);
+  const [label, setLabel] = useState("");
+  const [command, setCommand] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+
+  const reload = () =>
+    extappList()
+      .then(setApps)
+      .catch(() => {});
+
+  useEffect(() => {
+    void reload();
+  }, []);
+
+  function notifyChanged() {
+    window.dispatchEvent(new Event("olimpo:extapps-changed"));
+  }
+
+  async function pickExe() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Programas", extensions: ["exe", "cmd", "bat"] }],
+      });
+      if (typeof picked === "string") {
+        setCommand(picked);
+        if (!label.trim()) {
+          const base = picked.split("\\").pop() ?? "";
+          setLabel(base.replace(/\.(exe|cmd|bat)$/i, ""));
+        }
+      }
+    } catch {
+      // fora do Tauri
+    }
+  }
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      const lower = label.toLowerCase();
+      const icon =
+        /brave|chrome|edge|firefox|opera|navegador|browser/.test(lower)
+          ? "globe"
+          : /code|zed|cursor|studio|idea|editor/.test(lower)
+            ? "code"
+            : "app";
+      await extappAdd(label.trim(), command.trim(), "", icon);
+      setLabel("");
+      setCommand("");
+      await reload();
+      notifyChanged();
+    } catch (err) {
+      setError(String((err as { message?: string })?.message ?? err));
+    }
+  }
+
+  async function detect() {
+    setDetecting(true);
+    try {
+      setApps(await extappDetect());
+      notifyChanged();
+    } catch (err) {
+      setError(String((err as { message?: string })?.message ?? err));
+    } finally {
+      setDetecting(false);
+    }
+  }
+
+  return (
+    <Section title="Programas">
+      <p className="set-note">
+        Navegadores e editores aparecem no dock e no Spotlight — abrem fora do
+        Olimpo (janela própria do programa).
+      </p>
+      <form className="set-linkform" onSubmit={(e) => void add(e)}>
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Nome (ex.: Brave)"
+          maxLength={60}
+        />
+        <input
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          placeholder="C:\...\programa.exe"
+          maxLength={500}
+        />
+        <button
+          type="button"
+          className="set-btn"
+          title="Escolher executável"
+          onClick={() => void pickExe()}
+        >
+          …
+        </button>
+        <button
+          className="set-btn"
+          type="submit"
+          disabled={!label.trim() || !command.trim()}
+        >
+          <Plus size={14} />
+        </button>
+      </form>
+      {error && <div className="set-error">{error}</div>}
+      <ul className="set-links">
+        {apps.map((app) => (
+          <li key={app.id}>
+            <span className="set-extapp-icon">{extAppIcon(app.icon, 14)}</span>
+            <span className="set-links__label">{app.label}</span>
+            <span className="set-links__url">{app.command}</span>
+            <button
+              title="Remover"
+              onClick={() =>
+                void extappDelete(app.id).then(reload).then(notifyChanged)
+              }
+            >
+              <Trash2 size={13} />
+            </button>
+          </li>
+        ))}
+        {apps.length === 0 && (
+          <li className="set-note">
+            Nenhum programa. "Redetectar" procura Brave, Chrome, Edge, Firefox,
+            VS Code, Cursor e Zed.
+          </li>
+        )}
+      </ul>
+      <button className="set-btn" onClick={() => void detect()} disabled={detecting}>
+        {detecting ? "Procurando…" : "Redetectar instalados"}
+      </button>
+    </Section>
+  );
+}
+
 function AutostartSection() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
 
@@ -322,6 +466,7 @@ function SettingsApp() {
   return (
     <div className="set-app">
       <WallpaperSection />
+      <ExternalAppsSection />
       <TerminalSection />
       <AutostartSection />
       <GithubSection />

@@ -51,6 +51,17 @@ const MIGRATIONS: &[&str] = &[
         sort_order INTEGER NOT NULL
     ) STRICT;
     ",
+    // v2 — apps externos (navegadores, editores) lançáveis pelo shell
+    "
+    CREATE TABLE external_apps (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        label      TEXT NOT NULL,
+        command    TEXT NOT NULL,
+        args       TEXT NOT NULL DEFAULT '',
+        icon       TEXT NOT NULL DEFAULT 'app',
+        sort_order INTEGER NOT NULL
+    ) STRICT;
+    ",
 ];
 
 pub fn run(conn: &Connection) -> Result<()> {
@@ -86,7 +97,14 @@ mod tests {
             .unwrap()
             .filter_map(|r| r.ok())
             .collect();
-        for expected in ["settings", "todos", "pomodoro_sessions", "window_layouts", "quick_links"] {
+        for expected in [
+            "settings",
+            "todos",
+            "pomodoro_sessions",
+            "window_layouts",
+            "quick_links",
+            "external_apps",
+        ] {
             assert!(tables.iter().any(|t| t == expected), "faltou tabela {expected}");
         }
     }

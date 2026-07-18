@@ -261,6 +261,17 @@
   font-size: 11.5px;
   color: var(--text-tertiary);
 }
+.set-extapp-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 .set-links li button {
   border: none;
   background: none;
