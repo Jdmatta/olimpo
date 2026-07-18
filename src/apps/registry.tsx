@@ -64,9 +64,7 @@ const registry: Record<AppId, AppMeta> = {
     id: "github",
     title: "GitHub",
     icon: (size = 26) => <GithubMark size={size} />,
-    component: () => (
-      <ComingSoon title="GitHub" hint="Repos, issues e PRs via API oficial no M5." />
-    ),
+    component: lazy(() => import("./github/GithubApp")),
     defaultSize: { w: 960, h: 620 },
     minSize: { w: 600, h: 420 },
     multiInstance: false,
@@ -76,9 +74,7 @@ const registry: Record<AppId, AppMeta> = {
     id: "focus",
     title: "Foco",
     icon: (size = 26) => <Timer size={size} strokeWidth={1.6} />,
-    component: () => (
-      <ComingSoon title="Foco" hint="Pomodoro + tarefas do dia chegam no M4." />
-    ),
+    component: lazy(() => import("./focus/FocusApp")),
     defaultSize: { w: 420, h: 620 },
     minSize: { w: 360, h: 480 },
     multiInstance: false,

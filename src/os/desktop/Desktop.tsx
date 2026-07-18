@@ -3,6 +3,8 @@ import Wallpaper from "./Wallpaper";
 import WindowLayer from "../window-manager/WindowLayer";
 import MenuBar from "../menubar/MenuBar";
 import Dock from "../dock/Dock";
+import FocusOverlay from "../focus/FocusOverlay";
+import { startFocusTicker, useFocusStore } from "../focus/focusStore";
 import { useWindowStore } from "../window-manager/store";
 import {
   hydrateLayouts,
@@ -13,6 +15,9 @@ function Desktop() {
   useEffect(() => {
     let stopPersistence: (() => void) | undefined;
     let cancelled = false;
+
+    const stopTicker = startFocusTicker();
+    void useFocusStore.getState().restore();
 
     void hydrateLayouts().then(() => {
       if (cancelled) return;
@@ -29,6 +34,7 @@ function Desktop() {
 
     return () => {
       cancelled = true;
+      stopTicker();
       stopPersistence?.();
     };
   }, []);
@@ -38,6 +44,7 @@ function Desktop() {
       <WindowLayer />
       <MenuBar />
       <Dock />
+      <FocusOverlay />
     </div>
   );
 }

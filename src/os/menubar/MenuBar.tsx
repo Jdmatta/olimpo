@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mountain } from "lucide-react";
 import { useWindowStore } from "../window-manager/store";
+import PomodoroChip from "./PomodoroChip";
 import "./menubar.css";
 
 function useClock() {
@@ -86,6 +87,7 @@ function MenuBar() {
       </div>
 
       <div className="menubar__right">
+        <PomodoroChip />
         <span className="menubar__date">{date}</span>
         <span className="menubar__time">{time}</span>
       </div>

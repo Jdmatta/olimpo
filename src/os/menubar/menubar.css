@@ -80,9 +80,28 @@
 
 .menubar__right {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   font-size: 12.5px;
+}
+
+.menubar__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--glass-border-focus);
+  background: rgba(217, 180, 91, 0.14);
+  color: var(--laurel-bright);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.menubar__chip--break {
+  border-color: rgba(138, 123, 184, 0.4);
+  background: rgba(138, 123, 184, 0.16);
+  color: #c9bfe8;
 }
 
 .menubar__date {
