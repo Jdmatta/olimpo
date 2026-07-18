@@ -161,10 +161,10 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
       state.open(appId);
       return;
     }
-    const minimized = wins.filter((w) => w.minimized);
-    if (minimized.length === wins.length) {
+    const visible = wins.filter((w) => !w.minimized);
+    if (visible.length === 0) {
       // Tudo minimizado: restaura o mais recente.
-      const target = minimized.sort((a, b) => b.z - a.z)[0];
+      const target = wins.sort((a, b) => b.z - a.z)[0];
       set((s) => ({
         windows: {
           ...s.windows,
@@ -175,9 +175,13 @@ export const useWindowStore = create<WindowManagerState>((set, get) => ({
       }));
       return;
     }
-    const top = wins
-      .filter((w) => !w.minimized)
-      .sort((a, b) => b.z - a.z)[0];
+    // Toggle estilo taskbar: app já em primeiro plano → minimiza tudo dele.
+    const appIsFocused = visible.some((w) => w.id === state.focusedId);
+    if (appIsFocused) {
+      for (const w of visible) state.minimize(w.id);
+      return;
+    }
+    const top = visible.sort((a, b) => b.z - a.z)[0];
     state.focus(top.id);
   },
 

@@ -99,17 +99,23 @@ pub async fn github_assigned(state: State<'_, AppState>, force: bool) -> Result<
         }
     }
     let token = require_token()?;
+    // /issues (REST) em vez da Search API: search devolve 422 com tokens
+    // fine-grained sem permissão de busca; /issues degrada para lista vazia.
     let result = state
         .github
-        .get::<GhSearchIssues>(
-            "/search/issues?q=assignee%3A%40me+is%3Aopen&per_page=30",
+        .get::<Vec<crate::github::models::GhIssueItem>>(
+            "/issues?filter=assigned&state=open&per_page=30",
             &token,
         )
         .await?;
-    if let Ok(value) = serde_json::to_value(&result.data) {
+    let data = GhSearchIssues {
+        total_count: result.data.len() as u64,
+        items: result.data,
+    };
+    if let Ok(value) = serde_json::to_value(&data) {
         state.github_cache.put(KEY, value);
     }
-    Ok(result.data)
+    Ok(data)
 }
 
 #[tauri::command]

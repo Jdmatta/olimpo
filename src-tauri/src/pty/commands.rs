@@ -17,8 +17,10 @@ fn profile_command(profile: &str) -> Result<(&'static str, &'static [&'static st
     }
 }
 
+// Todos async: comandos síncronos rodam na MAIN thread do Tauri e uma
+// escrita bloqueada no pipe do ConPTY congelaria a UI inteira.
 #[tauri::command]
-pub fn pty_spawn(
+pub async fn pty_spawn(
     state: State<'_, AppState>,
     profile: String,
     cols: u16,
@@ -61,16 +63,21 @@ pub fn pty_spawn(
 }
 
 #[tauri::command]
-pub fn pty_write(state: State<'_, AppState>, id: u32, data: String) -> Result<()> {
+pub async fn pty_write(state: State<'_, AppState>, id: u32, data: String) -> Result<()> {
     state.ptys.write(id, data.as_bytes())
 }
 
 #[tauri::command]
-pub fn pty_resize(state: State<'_, AppState>, id: u32, cols: u16, rows: u16) -> Result<()> {
+pub async fn pty_resize(
+    state: State<'_, AppState>,
+    id: u32,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
     state.ptys.resize(id, cols.clamp(2, 500), rows.clamp(2, 300))
 }
 
 #[tauri::command]
-pub fn pty_kill(state: State<'_, AppState>, id: u32) -> Result<()> {
+pub async fn pty_kill(state: State<'_, AppState>, id: u32) -> Result<()> {
     state.ptys.kill(id)
 }

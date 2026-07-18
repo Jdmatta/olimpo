@@ -18,9 +18,19 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(app_data_dir: &Path) -> crate::error::Result<Self> {
-        // v1: raiz fixa do workspace; vira configuração no Settings (M6).
         let workspace_root = fallback_workspace();
-        let guard = PathGuard::new(&workspace_root)?;
+        // Raízes navegáveis no app Arquivos: workspace primeiro (principal),
+        // depois pastas pessoais úteis. Inexistentes são ignoradas pelo guard.
+        let home = std::env::var_os("USERPROFILE")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("C:\\"));
+        let roots = vec![
+            workspace_root.clone(),
+            home.join("Documents"),
+            home.join("Downloads"),
+            home.join(".claude"),
+        ];
+        let guard = PathGuard::new(&roots)?;
         let db = Db::open(app_data_dir)?;
         let wallpapers_dir = app_data_dir.join("wallpapers");
         std::fs::create_dir_all(&wallpapers_dir)?;

@@ -17,8 +17,9 @@ import {
   fsOpenInVsCode,
   fsRename,
   fsRevealInExplorer,
+  fsRoots,
 } from "../../lib/ipc";
-import type { FsEntry, FsListing } from "../../lib/ipc";
+import type { FsEntry, FsListing, FsRoot } from "../../lib/ipc";
 import { useWindowContext } from "../../os/window-manager/context";
 import { useWindowStore } from "../../os/window-manager/store";
 import { crumbsFor, formatModified, formatSize } from "./pathUtils";
@@ -45,6 +46,7 @@ function FileExplorer() {
   const openWindow = useWindowStore((s) => s.open);
 
   const [listing, setListing] = useState<FsListing | null>(null);
+  const [roots, setRoots] = useState<FsRoot[]>([]);
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -60,7 +62,6 @@ function FileExplorer() {
       const result = await fsList(path);
       setListing(result);
       setError(null);
-      if (!path) setRootPath((r) => r ?? result.path);
     } catch (err) {
       setError(errText(err));
     }
@@ -71,8 +72,22 @@ function FileExplorer() {
   }, [listing, load]);
 
   useEffect(() => {
-    void load();
+    fsRoots()
+      .then((rs) => {
+        setRoots(rs);
+        if (rs.length > 0) {
+          setRootPath(rs[0].path);
+          void load(rs[0].path);
+        }
+      })
+      .catch((err) => setError(errText(err)));
   }, [load]);
+
+  function switchRoot(root: FsRoot) {
+    setRootPath(root.path);
+    setSelected(null);
+    void load(root.path);
+  }
 
   // Revalida quando a janela ganha foco (substitui watcher no v1).
   const wasFocused = useRef(isFocused);
@@ -189,6 +204,21 @@ function FileExplorer() {
         setMenu({ x: e.clientX, y: e.clientY, entry: null });
       }}
     >
+      <div className="files-body-wrap">
+      <aside className="files-sidebar">
+        {roots.map((root) => (
+          <button
+            key={root.path}
+            className={`files-root ${rootPath === root.path ? "files-root--on" : ""}`}
+            onClick={() => switchRoot(root)}
+            title={root.path}
+          >
+            <Folder size={14} />
+            <span>{root.label}</span>
+          </button>
+        ))}
+      </aside>
+      <div className="files-main">
       <div className="files-toolbar">
         <button
           className="files-tool"
@@ -308,6 +338,8 @@ function FileExplorer() {
         {entries.length === 0 && !error && (
           <div className="files-empty">Pasta vazia</div>
         )}
+      </div>
+      </div>
       </div>
 
       {menu && (

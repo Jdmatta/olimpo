@@ -153,6 +153,7 @@ function ConnectView({
 function Dashboard({ onAuthLost }: { onAuthLost: (w: string) => void }) {
   const [overview, setOverview] = useState<GithubOverview | null>(null);
   const [assigned, setAssigned] = useState<GhSearchIssues | null>(null);
+  const [assignedError, setAssignedError] = useState<string | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [commits, setCommits] = useState<GhCommit[] | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
@@ -162,17 +163,20 @@ function Dashboard({ onAuthLost }: { onAuthLost: (w: string) => void }) {
     async (force: boolean) => {
       setBusy(true);
       setBanner(null);
-      try {
-        const [ov, asg] = await Promise.all([
-          githubOverview(force),
-          githubAssigned(force),
-        ]);
-        setOverview(ov);
-        setAssigned(asg);
-      } catch (err) {
-        const e = err as IpcError;
+      setAssignedError(null);
+      // allSettled: falha nos issues não pode derrubar o dashboard inteiro.
+      const [ov, asg] = await Promise.allSettled([
+        githubOverview(force),
+        githubAssigned(force),
+      ]);
+
+      if (ov.status === "fulfilled") {
+        setOverview(ov.value);
+      } else {
+        const e = ov.reason as IpcError;
         if (e.code === "github_auth") {
           onAuthLost("Token revogado ou expirado — conecta de novo.");
+          setBusy(false);
           return;
         }
         setBanner(
@@ -180,9 +184,18 @@ function Dashboard({ onAuthLost }: { onAuthLost: (w: string) => void }) {
             ? "Rate limit do GitHub atingido — tenta de novo em alguns minutos."
             : `Sem conexão com o GitHub agora. ${e.message ?? ""}`,
         );
-      } finally {
-        setBusy(false);
       }
+
+      if (asg.status === "fulfilled") {
+        setAssigned(asg.value);
+      } else {
+        const e = asg.reason as IpcError;
+        setAssignedError(
+          `Não consegui listar seus issues/PRs (${e.message ?? "erro"}). ` +
+            "Confere se o token tem permissão de leitura em Issues e Pull requests.",
+        );
+      }
+      setBusy(false);
     },
     [onAuthLost],
   );
@@ -301,7 +314,8 @@ function Dashboard({ onAuthLost }: { onAuthLost: (w: string) => void }) {
             )}
           </h2>
           <div className="gh-side__assigned">
-            {assigned?.items.length === 0 && (
+            {assignedError && <div className="gh-empty">{assignedError}</div>}
+            {!assignedError && assigned?.items.length === 0 && (
               <div className="gh-empty">Nada atribuído a você. Paz.</div>
             )}
             {assigned?.items.map((item) => (

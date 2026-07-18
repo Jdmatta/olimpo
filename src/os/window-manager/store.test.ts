@@ -79,6 +79,24 @@ describe("window manager store", () => {
     expect(s().windows[id].minimized).toBe(false);
   });
 
+  it("activateApp faz toggle: app focado minimiza; desfocado vem pra frente", () => {
+    s().activateApp("focus");
+    const focusId = s().focusedId!;
+    // Focado → clique no dock minimiza (estilo taskbar).
+    s().activateApp("focus");
+    expect(s().windows[focusId].minimized).toBe(true);
+
+    s().open("files");
+    s().activateApp("focus"); // minimizado → restaura
+    expect(s().windows[focusId].minimized).toBe(false);
+    expect(s().focusedId).toBe(focusId);
+
+    s().focus(Object.values(s().windows).find((w) => w.appId === "files")!.id);
+    s().activateApp("focus"); // visível mas sem foco → só foca, não minimiza
+    expect(s().focusedId).toBe(focusId);
+    expect(s().windows[focusId].minimized).toBe(false);
+  });
+
   it("close remove e repassa foco ao topo restante", () => {
     const a = s().open("files");
     const b = s().open("github");

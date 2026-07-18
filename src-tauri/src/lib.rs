@@ -31,6 +31,7 @@ pub fn run() {
             pty::commands::pty_write,
             pty::commands::pty_resize,
             pty::commands::pty_kill,
+            fs::commands::fs_roots,
             fs::commands::fs_list,
             fs::commands::fs_create_dir,
             fs::commands::fs_create_file,

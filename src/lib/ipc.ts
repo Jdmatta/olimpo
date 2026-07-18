@@ -62,6 +62,16 @@ export interface FsListing {
   entries: FsEntry[];
 }
 
+export interface FsRoot {
+  label: string;
+  path: string;
+}
+
+/** Raízes navegáveis (Workspace, Documents, Downloads, .claude). */
+export function fsRoots(): Promise<FsRoot[]> {
+  return invoke("fs_roots");
+}
+
 export function fsList(path?: string): Promise<FsListing> {
   return invoke("fs_list", { path: path ?? null });
 }

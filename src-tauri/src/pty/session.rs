@@ -13,7 +13,9 @@ pub type OnData = Arc<dyn Fn(Option<Vec<u8>>) + Send + Sync + 'static>;
 
 struct Session {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    /// Arc próprio: escrever NÃO pode segurar o lock do registry —
+    /// write_all bloqueia se o pipe do ConPTY estiver cheio.
+    writer: Arc<Mutex<Box<dyn Write + Send>>>,
     pid: Option<u32>,
 }
 
@@ -85,7 +87,7 @@ impl PtyRegistry {
             id,
             Session {
                 master: pty.master,
-                writer,
+                writer: Arc::new(Mutex::new(writer)),
                 pid,
             },
         );
@@ -141,10 +143,14 @@ impl PtyRegistry {
     }
 
     pub fn write(&self, id: u32, data: &[u8]) -> Result<()> {
-        let mut sessions = self.sessions.lock().unwrap();
-        let session = sessions.get_mut(&id).ok_or(Error::PtyNotFound(id))?;
-        session.writer.write_all(data)?;
-        session.writer.flush()?;
+        // Clona o Arc e SOLTA o lock do registry antes de escrever.
+        let writer = {
+            let sessions = self.sessions.lock().unwrap();
+            Arc::clone(&sessions.get(&id).ok_or(Error::PtyNotFound(id))?.writer)
+        };
+        let mut w = writer.lock().unwrap();
+        w.write_all(data)?;
+        w.flush()?;
         Ok(())
     }
 

@@ -22,6 +22,35 @@ pub struct FsListing {
     pub entries: Vec<FsEntry>,
 }
 
+#[derive(Serialize)]
+pub struct FsRoot {
+    pub label: String,
+    pub path: String,
+}
+
+/// Raízes navegáveis (sidebar do app Arquivos).
+#[tauri::command]
+pub fn fs_roots(state: State<'_, AppState>) -> Vec<FsRoot> {
+    state
+        .guard
+        .roots()
+        .iter()
+        .map(|root| {
+            let label = if root == state.guard.root() {
+                "Workspace".to_string()
+            } else {
+                root.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| root.to_string_lossy().into_owned())
+            };
+            FsRoot {
+                label,
+                path: root.to_string_lossy().into_owned(),
+            }
+        })
+        .collect()
+}
+
 fn to_entry(path: &Path) -> Option<FsEntry> {
     let meta = std::fs::metadata(path).ok()?;
     let modified_ms = meta
@@ -85,7 +114,7 @@ pub fn fs_create_file(state: State<'_, AppState>, parent: String, name: String) 
 #[tauri::command]
 pub fn fs_rename(state: State<'_, AppState>, path: String, new_name: String) -> Result<FsEntry> {
     let source = state.guard.resolve_existing(&path)?;
-    if source == state.guard.root() {
+    if state.guard.is_root(&source) {
         return Err(Error::PathInvalid("não dá para renomear a raiz".into()));
     }
     let parent = source
@@ -104,7 +133,7 @@ pub fn fs_rename(state: State<'_, AppState>, path: String, new_name: String) -> 
 #[tauri::command]
 pub fn fs_move(state: State<'_, AppState>, path: String, target_dir: String) -> Result<FsEntry> {
     let source = state.guard.resolve_existing(&path)?;
-    if source == state.guard.root() {
+    if state.guard.is_root(&source) {
         return Err(Error::PathInvalid("não dá para mover a raiz".into()));
     }
     let name = source
@@ -131,7 +160,7 @@ pub fn fs_move(state: State<'_, AppState>, path: String, target_dir: String) -> 
 #[tauri::command]
 pub fn fs_delete(state: State<'_, AppState>, path: String) -> Result<()> {
     let target = state.guard.resolve_existing(&path)?;
-    if target == state.guard.root() {
+    if state.guard.is_root(&target) {
         return Err(Error::PathInvalid("não dá para deletar a raiz".into()));
     }
     trash::delete(&target).map_err(|e| Error::Trash(e.to_string()))

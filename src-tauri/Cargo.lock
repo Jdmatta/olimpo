@@ -2693,7 +2693,7 @@ dependencies = [
 
 [[package]]
 name = "olimpo"
-version = "0.1.0"
+version = "1.0.1"
 dependencies = [
  "dunce",
  "keyring",

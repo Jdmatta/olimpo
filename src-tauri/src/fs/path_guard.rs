@@ -4,9 +4,9 @@ use crate::error::{Error, Result};
 
 /// Choke point de segurança: TODO caminho vindo do frontend passa por aqui.
 /// Canonicaliza (resolvendo junctions/symlinks e `..`) e exige que o resultado
-/// fique dentro da raiz do workspace.
+/// fique dentro de uma das raízes permitidas (workspace, Documents, Downloads…).
 pub struct PathGuard {
-    root: PathBuf,
+    roots: Vec<PathBuf>,
 }
 
 /// Nomes reservados do Windows — proibidos como nome de arquivo/pasta,
@@ -17,31 +17,54 @@ const RESERVED: &[&str] = &[
 ];
 
 impl PathGuard {
-    pub fn new(root: &Path) -> std::io::Result<Self> {
-        Ok(Self {
-            root: dunce::canonicalize(root)?,
-        })
+    /// A primeira raiz é a principal (workspace); raízes inexistentes são ignoradas.
+    pub fn new(roots: &[PathBuf]) -> std::io::Result<Self> {
+        let mut canonical = Vec::new();
+        for root in roots {
+            if let Ok(c) = dunce::canonicalize(root) {
+                canonical.push(c);
+            }
+        }
+        if canonical.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "nenhuma raiz válida para o guard",
+            ));
+        }
+        Ok(Self { roots: canonical })
     }
 
     pub fn root(&self) -> &Path {
-        &self.root
+        &self.roots[0]
     }
 
-    /// Resolve um caminho que DEVE existir, garantindo que está dentro da raiz.
+    pub fn roots(&self) -> &[PathBuf] {
+        &self.roots
+    }
+
+    pub fn is_root(&self, path: &Path) -> bool {
+        self.roots.iter().any(|r| r == path)
+    }
+
+    fn inside_any_root(&self, path: &Path) -> bool {
+        self.roots.iter().any(|r| path.starts_with(r))
+    }
+
+    /// Resolve um caminho que DEVE existir, garantindo que está numa raiz permitida.
     pub fn resolve_existing(&self, raw: &str) -> Result<PathBuf> {
         if raw.trim().is_empty() {
             return Err(Error::PathInvalid("caminho vazio".into()));
         }
         let canonical = dunce::canonicalize(raw)
             .map_err(|_| Error::PathNotFound(raw.to_string()))?;
-        if !canonical.starts_with(&self.root) {
+        if !self.inside_any_root(&canonical) {
             return Err(Error::PathOutsideRoot);
         }
         Ok(canonical)
     }
 
-    /// Resolve um caminho NOVO (criação/rename): o pai deve existir dentro da
-    /// raiz e o nome não pode conter separadores, `..` nem nomes reservados.
+    /// Resolve um caminho NOVO (criação/rename): o pai deve existir dentro de
+    /// uma raiz e o nome não pode conter separadores, `..` nem nomes reservados.
     pub fn resolve_new(&self, parent_raw: &str, leaf: &str) -> Result<PathBuf> {
         let parent = self.resolve_existing(parent_raw)?;
         if !parent.is_dir() {
@@ -50,7 +73,7 @@ impl PathGuard {
         validate_leaf(leaf)?;
         let candidate = parent.join(leaf);
         // Cinto e suspensório: mesmo com leaf validado, o join precisa continuar dentro.
-        if !candidate.starts_with(&self.root) {
+        if !self.inside_any_root(&candidate) {
             return Err(Error::PathOutsideRoot);
         }
         Ok(candidate)
@@ -93,8 +116,28 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("projeto")).unwrap();
         std::fs::write(dir.path().join("projeto").join("a.txt"), "x").unwrap();
-        let guard = PathGuard::new(dir.path()).unwrap();
+        let guard = PathGuard::new(&[dir.path().to_path_buf()]).unwrap();
         (dir, guard)
+    }
+
+    #[test]
+    fn multiplas_raizes_aceitas_e_inexistente_ignorada() {
+        let a = tempfile::tempdir().unwrap();
+        let b = tempfile::tempdir().unwrap();
+        let guard = PathGuard::new(&[
+            a.path().to_path_buf(),
+            PathBuf::from("C:\\nao-existe-olimpo"),
+            b.path().to_path_buf(),
+        ])
+        .unwrap();
+        assert_eq!(guard.roots().len(), 2);
+        assert!(guard.resolve_existing(a.path().to_str().unwrap()).is_ok());
+        assert!(guard.resolve_existing(b.path().to_str().unwrap()).is_ok());
+        assert!(guard.is_root(&dunce::canonicalize(b.path()).unwrap()));
+        assert!(matches!(
+            guard.resolve_existing("C:\\Windows"),
+            Err(Error::PathOutsideRoot)
+        ));
     }
 
     #[test]
