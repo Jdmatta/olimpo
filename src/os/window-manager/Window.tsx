@@ -126,9 +126,18 @@ function WindowFrameImpl({ win }: WindowFrameProps) {
 
   const Content = meta.component;
 
+  // position inline: .glass-sheen{position:relative} colidia com a classe
+  // .os-window{position:absolute} dependendo da ordem dos <style> do bundler.
   const frameStyle = win.maximized
-    ? { left: 0, top: MENUBAR_H, width: "100vw", height: `calc(100vh - ${MENUBAR_H}px)` }
+    ? {
+        position: "absolute" as const,
+        left: 0,
+        top: MENUBAR_H,
+        width: "100vw",
+        height: `calc(100vh - ${MENUBAR_H}px)`,
+      }
     : {
+        position: "absolute" as const,
         left: win.rect.x,
         top: win.rect.y,
         width: win.rect.w,

@@ -26,7 +26,8 @@ function makeTerminal(): Terminal {
     lineHeight: 1.25,
     scrollback: 8000,
     theme: {
-      background: "rgba(0,0,0,0)",
+      // Canvas do xterm não compõe transparência de verdade; tom do vidro.
+      background: "#0b1122",
       foreground: "#e4e4f0",
       cursor: "#f0d489",
       cursorAccent: "#0b1226",
