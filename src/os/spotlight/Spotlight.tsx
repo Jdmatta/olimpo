@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CornerDownLeft, Link as LinkIcon, Play, Search, Square } from "lucide-react";
+import {
+  CornerDownLeft,
+  Link as LinkIcon,
+  NotebookPen,
+  Play,
+  Search,
+  Square,
+} from "lucide-react";
 import { listAllApps } from "../../apps/registry";
 import { extappLaunch, extappList, quicklinkList } from "../../lib/ipc";
 import type { ExternalApp, QuickLinkDto } from "../../lib/ipc";
@@ -74,6 +81,13 @@ function Spotlight() {
       run: () => openWindow(app.id),
     }));
     const actions: Item[] = [
+      {
+        key: "act:sticky",
+        label: "Nova nota (post-it)",
+        hint: "estudo",
+        icon: <NotebookPen size={15} />,
+        run: () => void import("../desktop/createSticky").then((m) => m.createSticky()),
+      },
       focusSession
         ? {
             key: "act:stop",

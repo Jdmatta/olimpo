@@ -1,6 +1,7 @@
 export type AppId =
   | "files"
   | "terminal"
+  | "notes"
   | "github"
   | "focus"
   | "settings"

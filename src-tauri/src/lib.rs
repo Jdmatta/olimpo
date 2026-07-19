@@ -19,6 +19,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -63,6 +65,13 @@ pub fn run() {
             db::commands::pomodoro_history,
             db::commands::layout_save,
             db::commands::layout_all,
+            db::commands::note_add,
+            db::commands::note_list,
+            db::commands::note_update,
+            db::commands::note_delete,
+            db::commands::note_topics,
+            db::commands::note_review_mark,
+            db::commands::notes_export,
             db::commands::quicklink_add,
             db::commands::quicklink_list,
             db::commands::quicklink_delete,

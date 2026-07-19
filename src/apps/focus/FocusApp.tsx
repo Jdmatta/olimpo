@@ -305,7 +305,10 @@ function TodoSection() {
                 <button
                   title="Focar nesta tarefa"
                   onClick={() =>
-                    setCurrentTodo(currentTodoId === todo.id ? null : todo.id)
+                    setCurrentTodo(
+                      currentTodoId === todo.id ? null : todo.id,
+                      currentTodoId === todo.id ? null : todo.title,
+                    )
                   }
                 >
                   <Play size={12} />

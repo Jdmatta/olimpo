@@ -35,6 +35,8 @@ interface FocusStoreState {
   /** Overlay imersivo durante sessões de foco. */
   immersive: boolean;
   currentTodoId: number | null;
+  /** Título da tarefa focada — vira o tópico dos post-its criados no estudo. */
+  currentTodoTitle: string | null;
   hydrated: boolean;
   /** Focos completados no ciclo atual (persiste; pausa longa a cada 4). */
   cycleCount: number;
@@ -46,7 +48,7 @@ interface FocusStoreState {
   settle: (now: number) => Promise<void>;
   setDurations: (d: Durations) => void;
   setImmersive: (on: boolean) => void;
-  setCurrentTodo: (id: number | null) => void;
+  setCurrentTodo: (id: number | null, title?: string | null) => void;
 }
 
 const DEFAULTS: Durations = { focus: 25, break: 5, longBreak: 15 };
@@ -67,6 +69,7 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
   durations: DEFAULTS,
   immersive: false,
   currentTodoId: null,
+  currentTodoTitle: null,
   hydrated: false,
   cycleCount: 0,
 
@@ -175,7 +178,8 @@ export const useFocusStore = create<FocusStoreState>((set, get) => ({
     settingsSet("focus_immersive", on ? "1" : "0").catch(() => {});
   },
 
-  setCurrentTodo: (id) => set({ currentTodoId: id }),
+  setCurrentTodo: (id, title) =>
+    set({ currentTodoId: id, currentTodoTitle: title ?? null }),
 }));
 
 /** Ticker global único — inicia no Desktop; 1s de resolução basta. */

@@ -3,6 +3,7 @@ import type { ComponentType, LazyExoticComponent, ReactNode } from "react";
 import {
   FolderOpen,
   Mountain,
+  NotebookPen,
   Settings,
   SquareTerminal,
   Timer,
@@ -63,6 +64,16 @@ const registry: Record<AppId, AppMeta> = {
   // wry não entrega navigate/eval pra child no Windows (2.11). Código em
   // apps/browser/ e src-tauri/browser.rs pronto pra religar quando o
   // upstream corrigir. Análise: docs/EMBEDDED-BROWSER.md
+  notes: {
+    id: "notes",
+    title: "Notas",
+    icon: (size = 26) => <NotebookPen size={size} strokeWidth={1.6} />,
+    component: lazy(() => import("./notes/NotesApp")),
+    defaultSize: { w: 860, h: 600 },
+    minSize: { w: 560, h: 400 },
+    multiInstance: false,
+    pinned: true,
+  },
   github: {
     id: "github",
     title: "GitHub",

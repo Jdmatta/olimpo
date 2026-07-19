@@ -85,6 +85,21 @@
   font-size: 12.5px;
 }
 
+.menubar__tool {
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.menubar__tool:hover {
+  color: var(--laurel-bright);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .menubar__chip {
   display: inline-flex;
   align-items: center;

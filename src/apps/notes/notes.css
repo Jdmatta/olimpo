@@ -1,0 +1,273 @@
+.notes-app {
+  display: flex;
+  height: 100%;
+  font-size: 13px;
+}
+
+.notes-topics {
+  width: 170px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--glass-border);
+  padding: 10px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notes-topic {
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notes-topic:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+.notes-topic--on {
+  background: rgba(217, 180, 91, 0.12);
+  color: var(--laurel-bright);
+}
+
+.notes-empty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 6px;
+}
+
+.notes-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.notes-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 8px;
+}
+.notes-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--marble);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notes-count {
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.notes-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.notes-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.notes-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.notes-export {
+  margin: 0 14px 8px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: rgba(110, 214, 172, 0.1);
+  border: 1px solid rgba(110, 214, 172, 0.3);
+  color: var(--text-secondary);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.notes-export code {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 6px 14px 14px;
+}
+
+/* card de nota (reusa as cores do sticky) */
+.ncard {
+  display: flex;
+  flex-direction: column;
+  border-radius: 11px;
+  border: 1px solid var(--sticky-border, var(--glass-border));
+  background: var(--sticky-bg, rgba(255, 255, 255, 0.05));
+  min-height: 140px;
+}
+.ncard--louro { --sticky-bg: rgba(217, 180, 91, 0.13); --sticky-border: rgba(240, 212, 137, 0.35); }
+.ncard--rosa { --sticky-bg: rgba(232, 122, 158, 0.12); --sticky-border: rgba(244, 164, 190, 0.33); }
+.ncard--menta { --sticky-bg: rgba(110, 214, 172, 0.11); --sticky-border: rgba(150, 232, 198, 0.3); }
+.ncard--ceu { --sticky-bg: rgba(108, 168, 236, 0.12); --sticky-border: rgba(150, 196, 246, 0.33); }
+.ncard--lavanda { --sticky-bg: rgba(158, 134, 224, 0.13); --sticky-border: rgba(190, 172, 240, 0.33); }
+
+.ncard__bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px 3px;
+}
+.ncard__dots {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.ncard__tool {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+}
+.ncard__tool:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+.ncard__tool--danger:hover {
+  color: #ffb0ab;
+  background: rgba(255, 95, 87, 0.15);
+}
+.ncard__ondesk {
+  color: var(--laurel-bright);
+}
+
+.ncard__text,
+.ncard__flash textarea,
+.ncard__flash input {
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  padding: 4px 11px 10px;
+  width: 100%;
+}
+.ncard__text {
+  flex: 1;
+  min-height: 90px;
+}
+.ncard__flash {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.ncard__flash input {
+  font-weight: 600;
+  padding-bottom: 2px;
+}
+.ncard__flash textarea {
+  flex: 1;
+  min-height: 60px;
+}
+
+/* revisão */
+.review {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+}
+.review__progress,
+.review__final {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.review__card {
+  width: min(480px, 90%);
+  min-height: 220px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border-focus);
+  background: rgba(217, 180, 91, 0.08);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px;
+}
+.review__side {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--laurel);
+}
+.review__content {
+  font-size: 17px;
+  line-height: 1.5;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.review__hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+.review__actions {
+  display: flex;
+  gap: 12px;
+}
+.review__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.review__btn--ok:hover {
+  background: rgba(110, 214, 172, 0.2);
+}
+.review__btn--fail:hover {
+  background: rgba(255, 95, 87, 0.18);
+}

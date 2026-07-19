@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Mountain } from "lucide-react";
+import { Mountain, NotebookPen } from "lucide-react";
+import { createSticky } from "../desktop/createSticky";
 import { useWindowStore } from "../window-manager/store";
 import PomodoroChip from "./PomodoroChip";
 import "./menubar.css";
@@ -78,6 +79,15 @@ function MenuBar() {
             >
               Ajustes…
             </button>
+            <button
+              className="menubar__menu-item"
+              onClick={() => {
+                window.dispatchEvent(new Event("olimpo:check-updates"));
+                setMenuOpen(false);
+              }}
+            >
+              Buscar atualizações…
+            </button>
             <div className="menubar__separator" />
             <button className="menubar__menu-item" onClick={quitApp}>
               Encerrar Olimpo
@@ -87,6 +97,13 @@ function MenuBar() {
       </div>
 
       <div className="menubar__right">
+        <button
+          className="menubar__tool"
+          title="Novo post-it"
+          onClick={() => void createSticky().catch(() => {})}
+        >
+          <NotebookPen size={14} strokeWidth={1.8} />
+        </button>
         <PomodoroChip />
         <span className="menubar__date">{date}</span>
         <span className="menubar__time">{time}</span>

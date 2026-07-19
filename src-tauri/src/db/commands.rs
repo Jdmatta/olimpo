@@ -114,6 +114,153 @@ pub fn layout_all(state: State<'_, AppState>) -> Result<Vec<WindowLayout>> {
     state.db.with(repos::layout_all)
 }
 
+// ---------- notas / post-its ----------
+
+use crate::db::repos::Note;
+
+#[tauri::command]
+pub fn note_add(
+    state: State<'_, AppState>,
+    topic: String,
+    color: String,
+    x: f64,
+    y: f64,
+) -> Result<Note> {
+    state.db.with(|c| repos::note_add(c, &topic, &color, x, y))
+}
+
+#[tauri::command]
+pub fn note_list(
+    state: State<'_, AppState>,
+    topic: Option<String>,
+    desktop_only: bool,
+) -> Result<Vec<Note>> {
+    state
+        .db
+        .with(|c| repos::note_list(c, topic.as_deref(), desktop_only))
+}
+
+#[derive(serde::Deserialize)]
+pub struct NotePatch {
+    pub id: i64,
+    pub content: String,
+    pub color: String,
+    pub topic: String,
+    pub kind: String,
+    pub front: String,
+    pub back: String,
+    pub on_desktop: bool,
+    pub x: f64,
+    pub y: f64,
+}
+
+#[tauri::command]
+pub fn note_update(state: State<'_, AppState>, note: NotePatch) -> Result<()> {
+    state.db.with(|c| {
+        repos::note_update(
+            c,
+            note.id,
+            &note.content,
+            &note.color,
+            &note.topic,
+            &note.kind,
+            &note.front,
+            &note.back,
+            note.on_desktop,
+            note.x,
+            note.y,
+        )
+    })
+}
+
+#[tauri::command]
+pub fn note_delete(state: State<'_, AppState>, id: i64) -> Result<()> {
+    state.db.with(|c| repos::note_delete(c, id))
+}
+
+#[tauri::command]
+pub fn note_topics(state: State<'_, AppState>) -> Result<Vec<String>> {
+    state.db.with(repos::note_topics)
+}
+
+#[tauri::command]
+pub fn note_review_mark(state: State<'_, AppState>, id: i64, ok: bool) -> Result<()> {
+    state.db.with(|c| repos::note_review_mark(c, id, ok))
+}
+
+/// Exporta o resumo do tópico como .md em {workspace}\docs-estudo\ (via guard).
+#[tauri::command]
+pub fn notes_export(state: State<'_, AppState>, topic: String) -> Result<String> {
+    let notes = state
+        .db
+        .with(|c| repos::note_list(c, Some(topic.trim()), false))?;
+    if notes.is_empty() {
+        return Err(crate::error::Error::InvalidInput("tópico sem notas".into()));
+    }
+    let md = repos::notes_to_markdown(topic.trim(), &notes);
+
+    let root = state.guard.root().to_string_lossy().into_owned();
+    let dir = state.guard.resolve_new(&root, "docs-estudo")?;
+    if !dir.exists() {
+        std::fs::create_dir(&dir)?;
+    }
+    // Nome de arquivo seguro a partir do tópico.
+    let safe: String = topic
+        .trim()
+        .chars()
+        .map(|ch| if ch.is_alphanumeric() { ch.to_ascii_lowercase() } else { '-' })
+        .take(40)
+        .collect();
+    let day = chrono_free_today();
+    let filename = format!("resumo-{safe}-{day}.md");
+    let target = state
+        .guard
+        .resolve_new(&dir.to_string_lossy(), &filename)?;
+    std::fs::write(&target, md)?;
+    Ok(target.to_string_lossy().into_owned())
+}
+
+/// AAAA-MM-DD local sem depender do crate chrono.
+fn chrono_free_today() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    // Aproximação civil (UTC): suficiente para nome de arquivo.
+    let days = now / 86_400;
+    let (mut y, mut rem) = (1970i64, days as i64);
+    loop {
+        let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+        let len = if leap { 366 } else { 365 };
+        if rem < len {
+            break;
+        }
+        rem -= len;
+        y += 1;
+    }
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let months = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut m = 0usize;
+    while rem >= months[m] {
+        rem -= months[m];
+        m += 1;
+    }
+    format!("{y}-{:02}-{:02}", m + 1, rem + 1)
+}
+
 // ---------- quick links ----------
 
 #[tauri::command]

@@ -300,6 +300,61 @@ export function quicklinkDelete(id: number): Promise<void> {
   return invoke("quicklink_delete", { id });
 }
 
+// ---------- Notas / post-its ----------
+
+export interface Note {
+  id: number;
+  content: string;
+  color: string;
+  topic: string;
+  kind: "note" | "flash";
+  front: string;
+  back: string;
+  on_desktop: boolean;
+  x: number;
+  y: number;
+  reviewed_ok: number;
+  reviewed_fail: number;
+}
+
+export function noteAdd(
+  topic: string,
+  color: string,
+  x: number,
+  y: number,
+): Promise<Note> {
+  return invoke("note_add", { topic, color, x, y });
+}
+
+export function noteList(
+  topic: string | null,
+  desktopOnly: boolean,
+): Promise<Note[]> {
+  return invoke("note_list", { topic, desktopOnly });
+}
+
+export function noteUpdate(note: Note): Promise<void> {
+  const { reviewed_ok, reviewed_fail, ...patch } = note;
+  return invoke("note_update", { note: patch });
+}
+
+export function noteDelete(id: number): Promise<void> {
+  return invoke("note_delete", { id });
+}
+
+export function noteTopics(): Promise<string[]> {
+  return invoke("note_topics");
+}
+
+export function noteReviewMark(id: number, ok: boolean): Promise<void> {
+  return invoke("note_review_mark", { id, ok });
+}
+
+/** Exporta resumo .md do tópico em {workspace}\docs-estudo; retorna o caminho. */
+export function notesExport(topic: string): Promise<string> {
+  return invoke("notes_export", { topic });
+}
+
 // ---------- Wallpapers ----------
 
 export interface WallpaperInfo {

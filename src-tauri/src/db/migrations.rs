@@ -62,6 +62,26 @@ const MIGRATIONS: &[&str] = &[
         sort_order INTEGER NOT NULL
     ) STRICT;
     ",
+    // v3 — notas/post-its de estudo (viram flashcards e resumo)
+    "
+    CREATE TABLE notes (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        content       TEXT    NOT NULL DEFAULT '',
+        color         TEXT    NOT NULL DEFAULT 'louro',
+        topic         TEXT    NOT NULL DEFAULT 'geral',
+        kind          TEXT    NOT NULL DEFAULT 'note',
+        front         TEXT    NOT NULL DEFAULT '',
+        back          TEXT    NOT NULL DEFAULT '',
+        on_desktop    INTEGER NOT NULL DEFAULT 1,
+        x             REAL    NOT NULL DEFAULT 120,
+        y             REAL    NOT NULL DEFAULT 120,
+        sort_order    INTEGER NOT NULL DEFAULT 0,
+        created_at    INTEGER NOT NULL,
+        reviewed_ok   INTEGER NOT NULL DEFAULT 0,
+        reviewed_fail INTEGER NOT NULL DEFAULT 0
+    ) STRICT;
+    CREATE INDEX idx_notes_topic ON notes(topic, sort_order, id);
+    ",
 ];
 
 pub fn run(conn: &Connection) -> Result<()> {
@@ -104,6 +124,7 @@ mod tests {
             "window_layouts",
             "quick_links",
             "external_apps",
+            "notes",
         ] {
             assert!(tables.iter().any(|t| t == expected), "faltou tabela {expected}");
         }

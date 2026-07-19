@@ -479,6 +479,197 @@ pub fn extapp_count(conn: &Connection) -> Result<i64> {
         .map_err(Error::Db)
 }
 
+// ---------- notas / post-its ----------
+
+#[derive(Debug, Serialize)]
+pub struct Note {
+    pub id: i64,
+    pub content: String,
+    pub color: String,
+    pub topic: String,
+    pub kind: String,
+    pub front: String,
+    pub back: String,
+    pub on_desktop: bool,
+    pub x: f64,
+    pub y: f64,
+    pub reviewed_ok: i64,
+    pub reviewed_fail: i64,
+}
+
+const NOTE_COLORS: &[&str] = &["louro", "rosa", "menta", "ceu", "lavanda"];
+const MAX_NOTE_LEN: usize = 4000;
+
+fn validate_note_texts(content: &str, front: &str, back: &str, topic: &str) -> Result<()> {
+    if content.len() > MAX_NOTE_LEN || front.len() > MAX_NOTE_LEN || back.len() > MAX_NOTE_LEN {
+        return Err(Error::InvalidInput("nota longa demais (4000)".into()));
+    }
+    if topic.trim().is_empty() || topic.len() > 60 {
+        return Err(Error::InvalidInput("tópico vazio ou longo demais".into()));
+    }
+    Ok(())
+}
+
+fn note_color(color: &str) -> &str {
+    if NOTE_COLORS.contains(&color) { color } else { "louro" }
+}
+
+fn row_to_note(r: &rusqlite::Row) -> rusqlite::Result<Note> {
+    Ok(Note {
+        id: r.get(0)?,
+        content: r.get(1)?,
+        color: r.get(2)?,
+        topic: r.get(3)?,
+        kind: r.get(4)?,
+        front: r.get(5)?,
+        back: r.get(6)?,
+        on_desktop: r.get::<_, i64>(7)? != 0,
+        x: r.get(8)?,
+        y: r.get(9)?,
+        reviewed_ok: r.get(10)?,
+        reviewed_fail: r.get(11)?,
+    })
+}
+
+const NOTE_COLS: &str =
+    "id, content, color, topic, kind, front, back, on_desktop, x, y, reviewed_ok, reviewed_fail";
+
+pub fn note_add(conn: &Connection, topic: &str, color: &str, x: f64, y: f64) -> Result<Note> {
+    let topic = topic.trim();
+    validate_note_texts("", "", "", topic)?;
+    conn.execute(
+        "INSERT INTO notes (content, color, topic, on_desktop, x, y, created_at)
+         VALUES ('', ?1, ?2, 1, ?3, ?4, ?5)",
+        params![note_color(color), topic, x, y, now_ms()],
+    )?;
+    let id = conn.last_insert_rowid();
+    conn.query_row(
+        &format!("SELECT {NOTE_COLS} FROM notes WHERE id = ?1"),
+        params![id],
+        row_to_note,
+    )
+    .map_err(Error::Db)
+}
+
+pub fn note_list(conn: &Connection, topic: Option<&str>, desktop_only: bool) -> Result<Vec<Note>> {
+    let mut sql = format!("SELECT {NOTE_COLS} FROM notes WHERE 1=1");
+    if topic.is_some() {
+        sql.push_str(" AND topic = ?1");
+    }
+    if desktop_only {
+        sql.push_str(" AND on_desktop = 1");
+    }
+    sql.push_str(" ORDER BY sort_order, id");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = match topic {
+        Some(t) => stmt.query_map(params![t], row_to_note)?,
+        None => stmt.query_map([], row_to_note)?,
+    }
+    .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn note_update(
+    conn: &Connection,
+    id: i64,
+    content: &str,
+    color: &str,
+    topic: &str,
+    kind: &str,
+    front: &str,
+    back: &str,
+    on_desktop: bool,
+    x: f64,
+    y: f64,
+) -> Result<()> {
+    let topic = topic.trim();
+    validate_note_texts(content, front, back, topic)?;
+    if !matches!(kind, "note" | "flash") {
+        return Err(Error::InvalidInput("kind deve ser note|flash".into()));
+    }
+    let changed = conn.execute(
+        "UPDATE notes SET content = ?2, color = ?3, topic = ?4, kind = ?5,
+                front = ?6, back = ?7, on_desktop = ?8, x = ?9, y = ?10
+         WHERE id = ?1",
+        params![
+            id,
+            content,
+            note_color(color),
+            topic,
+            kind,
+            front,
+            back,
+            on_desktop as i64,
+            x,
+            y
+        ],
+    )?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub fn note_delete(conn: &Connection, id: i64) -> Result<()> {
+    let changed = conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub fn note_topics(conn: &Connection) -> Result<Vec<String>> {
+    let mut stmt =
+        conn.prepare("SELECT topic, COUNT(*) FROM notes GROUP BY topic ORDER BY MAX(created_at) DESC")?;
+    let rows = stmt
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+pub fn note_review_mark(conn: &Connection, id: i64, ok: bool) -> Result<()> {
+    let col = if ok { "reviewed_ok" } else { "reviewed_fail" };
+    let changed = conn.execute(
+        &format!("UPDATE notes SET {col} = {col} + 1 WHERE id = ?1"),
+        params![id],
+    )?;
+    if changed == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+/// Resumo markdown do tópico: notas como bullets, flashcards como Q/A.
+pub fn notes_to_markdown(topic: &str, notes: &[Note]) -> String {
+    let mut md = format!("# Resumo — {topic}\n\n");
+    let plain: Vec<_> = notes.iter().filter(|n| n.kind == "note").collect();
+    let flash: Vec<_> = notes.iter().filter(|n| n.kind == "flash").collect();
+    if !plain.is_empty() {
+        md.push_str("## Anotações\n\n");
+        for n in &plain {
+            let trimmed = n.content.trim();
+            if !trimmed.is_empty() {
+                for (i, line) in trimmed.lines().enumerate() {
+                    if i == 0 {
+                        md.push_str(&format!("- {line}\n"));
+                    } else {
+                        md.push_str(&format!("  {line}\n"));
+                    }
+                }
+            }
+        }
+        md.push('\n');
+    }
+    if !flash.is_empty() {
+        md.push_str("## Flashcards\n\n");
+        for n in &flash {
+            md.push_str(&format!("**P:** {}\n\n**R:** {}\n\n---\n\n", n.front.trim(), n.back.trim()));
+        }
+    }
+    md
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -615,6 +806,47 @@ mod tests {
 
             extapp_delete(c, app.id)?;
             assert!(matches!(extapp_get(c, app.id), Err(Error::NotFound)));
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn notas_crud_review_e_markdown() {
+        let db = db();
+        db.with(|c| {
+            let a = note_add(c, "Rust", "menta", 100.0, 200.0)?;
+            assert_eq!(a.color, "menta");
+            assert!(a.on_desktop);
+            // cor fora da whitelist cai no default
+            let b = note_add(c, "Rust", "neon-hacker", 0.0, 0.0)?;
+            assert_eq!(b.color, "louro");
+
+            note_update(c, a.id, "ownership move semantics", "menta", "Rust", "note", "", "", true, 111.0, 222.0)?;
+            note_update(c, b.id, "", "rosa", "Rust", "flash", "O que é borrow?", "Empréstimo sem posse", false, 0.0, 0.0)?;
+
+            assert!(note_update(c, a.id, "x", "menta", "Rust", "hack", "", "", true, 0.0, 0.0).is_err());
+            assert!(note_add(c, "  ", "menta", 0.0, 0.0).is_err());
+            assert!(note_update(c, a.id, &"x".repeat(4001), "menta", "Rust", "note", "", "", true, 0.0, 0.0).is_err());
+
+            let desktop = note_list(c, None, true)?;
+            assert_eq!(desktop.len(), 1);
+            assert_eq!(desktop[0].x, 111.0);
+
+            note_review_mark(c, b.id, true)?;
+            note_review_mark(c, b.id, false)?;
+            let all = note_list(c, Some("Rust"), false)?;
+            let flash = all.iter().find(|n| n.kind == "flash").unwrap();
+            assert_eq!((flash.reviewed_ok, flash.reviewed_fail), (1, 1));
+
+            let md = notes_to_markdown("Rust", &all);
+            assert!(md.contains("# Resumo — Rust"));
+            assert!(md.contains("- ownership move semantics"));
+            assert!(md.contains("**P:** O que é borrow?"));
+
+            assert_eq!(note_topics(c)?, vec!["Rust".to_string()]);
+            note_delete(c, a.id)?;
+            assert!(matches!(note_delete(c, a.id), Err(Error::NotFound)));
             Ok(())
         })
         .unwrap();

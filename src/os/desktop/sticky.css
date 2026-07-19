@@ -1,0 +1,105 @@
+.sticky-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 600;
+}
+
+.sticky {
+  position: absolute;
+  pointer-events: auto;
+  width: 230px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--sticky-border);
+  background: var(--sticky-bg);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.4);
+}
+
+.sticky--louro { --sticky-bg: rgba(217, 180, 91, 0.16); --sticky-border: rgba(240, 212, 137, 0.4); }
+.sticky--rosa { --sticky-bg: rgba(232, 122, 158, 0.14); --sticky-border: rgba(244, 164, 190, 0.38); }
+.sticky--menta { --sticky-bg: rgba(110, 214, 172, 0.13); --sticky-border: rgba(150, 232, 198, 0.36); }
+.sticky--ceu { --sticky-bg: rgba(108, 168, 236, 0.14); --sticky-border: rgba(150, 196, 246, 0.38); }
+.sticky--lavanda { --sticky-bg: rgba(158, 134, 224, 0.15); --sticky-border: rgba(190, 172, 240, 0.38); }
+
+.sticky__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 4px 10px;
+  cursor: grab;
+  user-select: none;
+}
+.sticky__bar:active {
+  cursor: grabbing;
+}
+
+.sticky__topic {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.sticky__dots {
+  display: flex;
+  gap: 4px;
+}
+.sticky__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.sticky__dot--louro { background: #d9b45b; }
+.sticky__dot--rosa { background: #e87a9e; }
+.sticky__dot--menta { background: #6ed6ac; }
+.sticky__dot--ceu { background: #6ca8ec; }
+.sticky__dot--lavanda { background: #9e86e0; }
+.sticky__dot--on {
+  border-color: var(--marble);
+  transform: scale(1.15);
+}
+
+.sticky__close {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 5px;
+}
+.sticky__close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sticky__text {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  padding: 4px 12px 12px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  min-height: 100px;
+}
+.sticky__text::placeholder {
+  color: var(--text-tertiary);
+}

@@ -41,6 +41,14 @@
   pointer-events: none;
 }
 
+/* Animações reduzidas (Ajustes › Aparência). */
+:root[data-reduced-motion] *,
+:root[data-reduced-motion] *::before,
+:root[data-reduced-motion] *::after {
+  transition-duration: 0.01s !important;
+  animation-duration: 0.01s !important;
+}
+
 /* Grain sutil por cima do vidro — mata o look "plástico liso". */
 .grain::after {
   content: "";

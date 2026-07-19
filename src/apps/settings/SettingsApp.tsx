@@ -19,6 +19,8 @@ import type { ExternalApp, QuickLinkDto, WallpaperInfo } from "../../lib/ipc";
 import { extAppIcon } from "../../os/dock/Dock";
 import type { ShellProfile } from "../../lib/ipc";
 import { WALLPAPER_PRESETS } from "../../os/desktop/Wallpaper";
+import { ACCENTS, GLASS_LEVELS } from "../../os/theme/appearance";
+import { listPinnedApps } from "../registry";
 import "./settings.css";
 
 function Section({
@@ -33,6 +35,126 @@ function Section({
       <h2>{title}</h2>
       {children}
     </section>
+  );
+}
+
+function AppearanceSection() {
+  const [accent, setAccent] = useState("louro");
+  const [glass, setGlass] = useState("padrao");
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    void Promise.all([
+      settingsGet("appearance_accent"),
+      settingsGet("appearance_glass"),
+      settingsGet("appearance_reduced"),
+    ])
+      .then(([a, g, r]) => {
+        if (a) setAccent(a);
+        if (g) setGlass(g);
+        setReduced(r === "1");
+      })
+      .catch(() => {});
+  }, []);
+
+  function apply(key: string, value: string) {
+    settingsSet(key, value).catch(() => {});
+    window.dispatchEvent(new Event("olimpo:appearance-changed"));
+  }
+
+  return (
+    <Section title="Aparência">
+      <div className="set-row">
+        <span>Cor de acento</span>
+        <span className="set-accents">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              className={`set-accent ${accent === a.id ? "set-accent--on" : ""}`}
+              style={{ background: `linear-gradient(135deg, ${a.bright}, ${a.base})` }}
+              title={a.label}
+              onClick={() => {
+                setAccent(a.id);
+                apply("appearance_accent", a.id);
+              }}
+            />
+          ))}
+        </span>
+      </div>
+      <div className="set-row">
+        <span>Intensidade do vidro</span>
+        <span className="set-glass-levels">
+          {GLASS_LEVELS.map((g) => (
+            <button
+              key={g.id}
+              className={`set-btn ${glass === g.id ? "set-btn--on" : ""}`}
+              onClick={() => {
+                setGlass(g.id);
+                apply("appearance_glass", g.id);
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
+        </span>
+      </div>
+      <div className="set-row">
+        <span>Animações reduzidas</span>
+        <button
+          role="switch"
+          aria-checked={reduced}
+          className={`set-switch ${reduced ? "set-switch--on" : ""}`}
+          onClick={() => {
+            const next = !reduced;
+            setReduced(next);
+            apply("appearance_reduced", next ? "1" : "0");
+          }}
+        >
+          <span className="set-switch__knob" />
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+function BehaviorSection() {
+  const [bootApps, setBootApps] = useState<string[]>([]);
+  const apps = listPinnedApps();
+
+  useEffect(() => {
+    settingsGet("boot_apps")
+      .then((raw) => {
+        if (!raw) return;
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) setBootApps(parsed.filter((x) => typeof x === "string"));
+      })
+      .catch(() => {});
+  }, []);
+
+  function toggle(id: string) {
+    const next = bootApps.includes(id)
+      ? bootApps.filter((x) => x !== id)
+      : [...bootApps, id];
+    setBootApps(next);
+    settingsSet("boot_apps", JSON.stringify(next)).catch(() => {});
+  }
+
+  return (
+    <Section title="Comportamento">
+      <p className="set-note">Apps que abrem junto com o Olimpo:</p>
+      <div className="set-bootapps">
+        {apps.map((app) => (
+          <label key={app.id} className="set-bootapp">
+            <input
+              type="checkbox"
+              checked={bootApps.includes(app.id)}
+              onChange={() => toggle(app.id)}
+            />
+            {app.title}
+          </label>
+        ))}
+      </div>
+    </Section>
   );
 }
 
@@ -465,7 +587,9 @@ function AutostartSection() {
 function SettingsApp() {
   return (
     <div className="set-app">
+      <AppearanceSection />
       <WallpaperSection />
+      <BehaviorSection />
       <ExternalAppsSection />
       <TerminalSection />
       <AutostartSection />

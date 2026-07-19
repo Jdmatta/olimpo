@@ -24,6 +24,11 @@ lerna-debug.log*
 .env
 .env.*
 
+# Assinatura do updater — chave privada e artefato gerado por release
+*.key
+latest.json
+docs-estudo/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
