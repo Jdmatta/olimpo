@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import Wallpaper from "./Wallpaper";
+import DesktopIcons from "./DesktopIcons";
 import WindowLayer from "../window-manager/WindowLayer";
 import MenuBar from "../menubar/MenuBar";
 import Dock from "../dock/Dock";
@@ -21,7 +22,15 @@ function Desktop() {
       try {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         const win = getCurrentWindow();
-        await win.setFullscreen(!(await win.isFullscreen()));
+        if (await win.isFullscreen()) {
+          await win.setFullscreen(false);
+          await win.maximize();
+        } else {
+          // Fullscreen a partir de maximizada deixa faixa preta no Windows:
+          // desmaximiza primeiro para o wry medir a tela inteira.
+          await win.unmaximize();
+          await win.setFullscreen(true);
+        }
       } catch {
         // fora do Tauri: nada a fazer
       }
@@ -65,6 +74,7 @@ function Desktop() {
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <Wallpaper />
+      <DesktopIcons />
       <QuickLinks />
       <SnapPreview />
       <WindowLayer />

@@ -15,8 +15,8 @@ function useClock() {
 
 async function quitApp() {
   try {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    await getCurrentWindow().close();
+    const { appQuit } = await import("../../lib/ipc");
+    await appQuit();
   } catch {
     // Fora do Tauri (dev no browser): não há o que fechar.
   }

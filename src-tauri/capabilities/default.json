@@ -20,6 +20,9 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen"
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close"
   ]
 }

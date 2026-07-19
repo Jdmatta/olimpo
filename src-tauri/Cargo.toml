@@ -1,6 +1,6 @@
 [package]
 name = "olimpo"
-version = "1.2.0"
+version = "1.3.0"
 description = "Olimpo — desktop OS-style workspace for dev focus and organization"
 authors = ["Jairo da Matta"]
 edition = "2021"
@@ -32,6 +32,7 @@ trash = "5"
 rusqlite = { version = "0.40", features = ["bundled"] }
 keyring = "4"
 reqwest = { version = "0.12", features = ["json"] }
+url = "2"
 
 [dev-dependencies]
 tempfile = "3"

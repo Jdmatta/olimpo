@@ -316,6 +316,12 @@ export function wallpaperImport(source: string): Promise<string> {
   return invoke("wallpaper_import", { source });
 }
 
+// ---------- App ----------
+
+export function appQuit(): Promise<void> {
+  return invoke("app_quit");
+}
+
 // ---------- Apps externos ----------
 
 export interface ExternalApp {

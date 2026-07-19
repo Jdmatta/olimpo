@@ -59,6 +59,10 @@ const registry: Record<AppId, AppMeta> = {
     multiInstance: true,
     pinned: true,
   },
+  // "browser": app embutido via child webview (Tauri unstable) DESLIGADO —
+  // wry não entrega navigate/eval pra child no Windows (2.11). Código em
+  // apps/browser/ e src-tauri/browser.rs pronto pra religar quando o
+  // upstream corrigir. Análise: docs/EMBEDDED-BROWSER.md
   github: {
     id: "github",
     title: "GitHub",

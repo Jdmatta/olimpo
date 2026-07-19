@@ -1,3 +1,4 @@
+mod app_control;
 mod db;
 mod error;
 mod extapps;
@@ -78,6 +79,7 @@ pub fn run() {
             extapps::extapp_delete,
             extapps::extapp_detect,
             extapps::extapp_launch,
+            app_control::app_quit,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
