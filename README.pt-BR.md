@@ -24,6 +24,9 @@ Tauri 2 (Rust) · React 19 + TypeScript · Windows 11
 | **Arquivos** | Explorer do workspace: navegar, criar, renomear, mover (drag & drop), **deletar só para a Lixeira**, abrir no VS Code, "Abrir Terminal aqui" — restrito a raízes permitidas pelo path guard |
 | **Foco** | Pomodoro por **timestamps** (sobrevive a restart no meio da sessão) com técnicas de estudo (25/5, 52/17, 90/20) e **pausa longa a cada 4 ciclos**, tarefas do dia com carry-over, modo **imersivo** que cobre o desktop, toast nativo, histórico de 14 dias |
 | **Launcher** | Detecta navegadores e editores instalados (Brave, Chrome, Edge, Firefox, VS Code, Cursor, Zed) e aceita qualquer executável cadastrado — lançados pelo dock ou Spotlight, validados e executados com lista de argumentos |
+| **Notas** | Post-its de vidro arrastáveis no desktop durante o estudo (tópico herdado da tarefa em foco); app para editar, virar **flashcard**, **revisar** embaralhado e exportar resumo Markdown no workspace |
+
+Personalização (Ajustes › Aparência): cor de acento, densidade do vidro, animações reduzidas e apps que abrem no boot. Auto-atualização pelas Releases do GitHub (assinada). Ícones arrastáveis no desktop.
 | **GitHub** | Dashboard via API oficial: repos, issues/PRs atribuídos, commits; PAT guardado no **Windows Credential Manager** — nunca em arquivo, banco ou frontend |
 | **Ajustes** | Wallpapers (presets procedurais ou imagens suas), shell padrão, quick links, conexão GitHub, autostart |
 
