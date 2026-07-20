@@ -111,7 +111,22 @@ function Desktop() {
     };
   }, []);
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div
+      className="relative h-screen w-screen overflow-hidden"
+      onContextMenu={(e) => {
+        // Menu do desktop só na área vazia (não sobre janela/app/ícone).
+        const el = e.target as HTMLElement;
+        if (el.closest(".os-window, .desktop-icon, .sticky, .dock, .menubar")) {
+          return;
+        }
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("olimpo:desktop-context", {
+            detail: { x: e.clientX, y: e.clientY },
+          }),
+        );
+      }}
+    >
       <Wallpaper />
       <DesktopIcons />
       <StickyLayer />

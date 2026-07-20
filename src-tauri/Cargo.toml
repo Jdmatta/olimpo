@@ -1,6 +1,6 @@
 [package]
 name = "olimpo"
-version = "1.4.1"
+version = "1.4.2"
 description = "Olimpo — desktop OS-style workspace for dev focus and organization"
 authors = ["Jairo da Matta"]
 edition = "2021"

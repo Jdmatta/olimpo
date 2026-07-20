@@ -47,3 +47,30 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.desktop-icons__menu {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 10000;
+  min-width: 168px;
+  padding: 5px;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-window);
+  background: rgba(10, 14, 28, 0.9);
+}
+.desktop-icons__menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.desktop-icons__menu button:hover {
+  background: rgba(240, 212, 137, 0.16);
+  color: var(--laurel-bright);
+}

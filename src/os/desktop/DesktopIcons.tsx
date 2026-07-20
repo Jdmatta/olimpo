@@ -30,6 +30,41 @@ function defaultPos(index: number): { x: number; y: number } {
   };
 }
 
+/** Encaixa uma posição solta na célula mais próxima da grade invisível. */
+export function snapToGrid(x: number, y: number): { col: number; row: number } {
+  return {
+    col: Math.max(0, Math.round((x - GRID_X) / CELL_W)),
+    row: Math.max(0, Math.round((y - GRID_Y) / CELL_H)),
+  };
+}
+
+function cellToXY(col: number, row: number): { x: number; y: number } {
+  return { x: GRID_X + col * CELL_W, y: GRID_Y + row * CELL_H };
+}
+
+function xyToCell(x: number, y: number): string {
+  return `${Math.round((x - GRID_X) / CELL_W)},${Math.round((y - GRID_Y) / CELL_H)}`;
+}
+
+/** Primeira célula livre a partir de (col,row): desce a coluna, depois a próxima. */
+function firstFreeCell(
+  col: number,
+  row: number,
+  occupied: Set<string>,
+): { x: number; y: number } {
+  let c = col;
+  let r = row;
+  for (let step = 0; step < 200; step++) {
+    if (!occupied.has(`${c},${r}`)) return cellToXY(c, r);
+    r += 1;
+    if (r >= PER_COLUMN) {
+      r = 0;
+      c += 1;
+    }
+  }
+  return cellToXY(col, row);
+}
+
 /** Ícones da área de trabalho — arrastáveis, posição persistida; dblclick abre. */
 function DesktopIcons() {
   const openWindow = useWindowStore((s) => s.open);
@@ -69,6 +104,19 @@ function DesktopIcons() {
     }, 500);
   }
 
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Right-click no desktop vazio é capturado pelo Desktop root (este container
+  // é pointer-events:none pra não bloquear as janelas) e chega via evento.
+  useEffect(() => {
+    function onContext(e: Event) {
+      const { x, y } = (e as CustomEvent<{ x: number; y: number }>).detail;
+      setMenu({ x, y });
+    }
+    window.addEventListener("olimpo:desktop-context", onContext);
+    return () => window.removeEventListener("olimpo:desktop-context", onContext);
+  }, []);
+
   const entries: IconEntry[] = [
     ...listPinnedApps().map((app) => ({
       key: `app:${app.id}`,
@@ -84,18 +132,59 @@ function DesktopIcons() {
     })),
   ];
 
+  const effectivePos = (key: string, i: number) =>
+    positions[key] ?? defaultPos(i);
+
+  function handleMoved(key: string, dropX: number, dropY: number) {
+    // Células ocupadas pelos OUTROS ícones (resolve colisão no snap).
+    const occupied = new Set<string>();
+    entries.forEach((e, i) => {
+      if (e.key === key) return;
+      const p = effectivePos(e.key, i);
+      occupied.add(xyToCell(p.x, p.y));
+    });
+    const { col, row } = snapToGrid(dropX, dropY);
+    const free = firstFreeCell(col, row, occupied);
+    persist({ ...positions, [key]: free });
+  }
+
+  /** Reorganiza tudo na grade limpa, na ordem natural dos ícones. */
+  function organize() {
+    const next: Positions = {};
+    entries.forEach((e, i) => {
+      next[e.key] = defaultPos(i);
+    });
+    persist(next);
+    setMenu(null);
+  }
+
   return (
-    <div className="desktop-icons" onClick={() => setSelected(null)}>
+    <div
+      className="desktop-icons"
+      onClick={() => {
+        setSelected(null);
+        setMenu(null);
+      }}
+    >
       {entries.map((entry, i) => (
         <DraggableIcon
           key={entry.key}
           entry={entry}
-          pos={positions[entry.key] ?? defaultPos(i)}
+          pos={effectivePos(entry.key, i)}
           selected={selected === entry.key}
           onSelect={() => setSelected(entry.key)}
-          onMoved={(x, y) => persist({ ...positions, [entry.key]: { x, y } })}
+          onMoved={(x, y) => handleMoved(entry.key, x, y)}
         />
       ))}
+      {menu && (
+        <div
+          className="desktop-icons__menu glass-strong"
+          style={{ left: menu.x, top: menu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={organize}>Organizar ícones</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -138,9 +227,10 @@ function DraggableIcon({
     if (!d || !el) return;
     el.style.transform = "";
     if (d.moved) {
+      // Reporta o ponto solto cru; o pai faz snap-to-grid + resolve colisão.
       onMoved(
         Math.max(0, pos.x + (e.clientX - d.startX)),
-        Math.max(34, pos.y + (e.clientY - d.startY)),
+        Math.max(GRID_Y, pos.y + (e.clientY - d.startY)),
       );
     }
   }
