@@ -45,7 +45,10 @@
   color: var(--marble);
 }
 
-.menubar__menu {
+/* Especificidade dobrada de propósito: .glass-sheen{position:relative} tem a
+   mesma força que .menubar__menu e venceria por ordem de import, jogando o menu
+   pro fluxo do flex (empurrava a barra pra cima e cortava "Sobre o Olimpo"). */
+.menubar .menubar__menu {
   position: absolute;
   top: calc(var(--menubar-height) + 4px);
   left: 0;
@@ -55,6 +58,8 @@
   box-shadow: var(--shadow-window);
   display: flex;
   flex-direction: column;
+  /* Dropdown precisa ser legível mesmo sobre ícones do desktop. */
+  background: rgba(10, 14, 28, 0.88);
 }
 
 .menubar__menu-item {

@@ -21,7 +21,12 @@
   border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
-/* Brilho de topo: linha de luz que vende o vidro. */
+/* Brilho de topo: linha de luz que vende o vidro.
+   ARMADILHA: este `position: relative` tem a mesma especificidade que a classe
+   do componente. Se um elemento com glass-sheen também precisa ser `absolute`/
+   `fixed`, declare a posição com especificidade MAIOR (ex.: `.pai .filho`) ou
+   inline — senão esta regra vence por ordem de import. Já mordeu .os-window e
+   .menubar__menu. */
 .glass-sheen {
   position: relative;
 }
