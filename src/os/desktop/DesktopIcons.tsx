@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { listPinnedApps } from "../../apps/registry";
 import { extappLaunch, extappList, settingsGet, settingsSet } from "../../lib/ipc";
@@ -23,27 +23,20 @@ const CELL_W = 86;
 const PER_COLUMN = 7;
 const DRAG_THRESHOLD = 6;
 
-function defaultPos(index: number): { x: number; y: number } {
-  return {
-    x: GRID_X + Math.floor(index / PER_COLUMN) * CELL_W,
-    y: GRID_Y + (index % PER_COLUMN) * CELL_H,
-  };
-}
 
-/** Encaixa uma posição solta na célula mais próxima da grade invisível. */
+/**
+ * Encaixa uma posição solta na célula mais próxima da grade invisível.
+ * `row` é clampado em [0, PER_COLUMN-1] pra nunca criar linha órfã fora da grade.
+ */
 export function snapToGrid(x: number, y: number): { col: number; row: number } {
   return {
     col: Math.max(0, Math.round((x - GRID_X) / CELL_W)),
-    row: Math.max(0, Math.round((y - GRID_Y) / CELL_H)),
+    row: Math.min(PER_COLUMN - 1, Math.max(0, Math.round((y - GRID_Y) / CELL_H))),
   };
 }
 
-function cellToXY(col: number, row: number): { x: number; y: number } {
-  return { x: GRID_X + col * CELL_W, y: GRID_Y + row * CELL_H };
-}
-
-function xyToCell(x: number, y: number): string {
-  return `${Math.round((x - GRID_X) / CELL_W)},${Math.round((y - GRID_Y) / CELL_H)}`;
+function cellKey(col: number, row: number): string {
+  return `${col},${row}`;
 }
 
 /** Primeira célula livre a partir de (col,row): desce a coluna, depois a próxima. */
@@ -51,18 +44,65 @@ function firstFreeCell(
   col: number,
   row: number,
   occupied: Set<string>,
-): { x: number; y: number } {
-  let c = col;
-  let r = row;
-  for (let step = 0; step < 200; step++) {
-    if (!occupied.has(`${c},${r}`)) return cellToXY(c, r);
+): { col: number; row: number } {
+  let c = Math.max(0, col);
+  let r = Math.min(PER_COLUMN - 1, Math.max(0, row));
+  // Limite generoso; com poucos ícones nunca chega perto.
+  for (let step = 0; step < 5000; step++) {
+    if (!occupied.has(cellKey(c, r))) return { col: c, row: r };
     r += 1;
     if (r >= PER_COLUMN) {
       r = 0;
       c += 1;
     }
   }
-  return cellToXY(col, row);
+  return { col: c, row: r };
+}
+
+interface Cell {
+  col: number;
+  row: number;
+}
+
+/**
+ * Layout efetivo de TODOS os ícones, sem empilhamento — resolvido no render,
+ * não só no drop. Salvos (com shape válido) ocupam suas células primeiro (com
+ * snap+colisão entre si); os sem posição preenchem as primeiras células livres,
+ * na ordem de `entries`. Assim, reordenar `entries` (add/remove de app externo)
+ * nunca faz dois ícones caírem na mesma célula.
+ */
+export function computeLayout(
+  keys: string[],
+  positions: Positions,
+): Record<string, Cell> {
+  const occupied = new Set<string>();
+  const layout: Record<string, Cell> = {};
+
+  const validSaved = (key: string): Cell | null => {
+    const p = positions[key];
+    if (!p || typeof p.x !== "number" || typeof p.y !== "number") return null;
+    if (Number.isNaN(p.x) || Number.isNaN(p.y)) return null;
+    return snapToGrid(p.x, p.y);
+  };
+
+  for (const key of keys) {
+    const saved = validSaved(key);
+    if (!saved) continue;
+    const cell = firstFreeCell(saved.col, saved.row, occupied);
+    layout[key] = cell;
+    occupied.add(cellKey(cell.col, cell.row));
+  }
+  for (const key of keys) {
+    if (layout[key]) continue;
+    const cell = firstFreeCell(0, 0, occupied);
+    layout[key] = cell;
+    occupied.add(cellKey(cell.col, cell.row));
+  }
+  return layout;
+}
+
+function cellToXY(cell: Cell): { x: number; y: number } {
+  return { x: GRID_X + cell.col * CELL_W, y: GRID_Y + cell.row * CELL_H };
 }
 
 /** Ícones da área de trabalho — arrastáveis, posição persistida; dblclick abre. */
@@ -96,8 +136,9 @@ function DesktopIcons() {
     return () => window.removeEventListener("olimpo:extapps-changed", load);
   }, []);
 
-  function persist(next: Positions) {
-    setPositions(next);
+  // Só agenda a gravação (debounce). O state é atualizado pelo caller via
+  // setPositions funcional — evita ler `positions` stale.
+  function schedulePersist(next: Positions) {
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
       settingsSet("desktop_icon_pos", JSON.stringify(next)).catch(() => {});
@@ -132,29 +173,33 @@ function DesktopIcons() {
     })),
   ];
 
-  const effectivePos = (key: string, i: number) =>
-    positions[key] ?? defaultPos(i);
+  // Layout sem empilhamento, recomputado quando ícones ou posições mudam.
+  const layout = useMemo(
+    () => computeLayout(entries.map((e) => e.key), positions),
+    [entries.map((e) => e.key).join("|"), positions],
+  );
 
   function handleMoved(key: string, dropX: number, dropY: number) {
-    // Células ocupadas pelos OUTROS ícones (resolve colisão no snap).
-    const occupied = new Set<string>();
-    entries.forEach((e, i) => {
-      if (e.key === key) return;
-      const p = effectivePos(e.key, i);
-      occupied.add(xyToCell(p.x, p.y));
-    });
     const { col, row } = snapToGrid(dropX, dropY);
-    const free = firstFreeCell(col, row, occupied);
-    persist({ ...positions, [key]: free });
+    // Clamp de coluna contra a largura atual: ícone nunca cai fora da tela.
+    const maxCol = Math.max(
+      0,
+      Math.floor((window.innerWidth - GRID_X - CELL_W) / CELL_W),
+    );
+    const cell = cellToXY({ col: Math.min(col, maxCol), row });
+    // Updater funcional: nunca lê `positions` stale (mata a race de drops
+    // seguidos). computeLayout resolve se a célula colidir com outro ícone.
+    setPositions((prev) => {
+      const next = { ...prev, [key]: cell };
+      schedulePersist(next);
+      return next;
+    });
   }
 
-  /** Reorganiza tudo na grade limpa, na ordem natural dos ícones. */
+  /** Reorganiza tudo na grade limpa: zera posições → computeLayout preenche. */
   function organize() {
-    const next: Positions = {};
-    entries.forEach((e, i) => {
-      next[e.key] = defaultPos(i);
-    });
-    persist(next);
+    setPositions({});
+    schedulePersist({});
     setMenu(null);
   }
 
@@ -166,16 +211,19 @@ function DesktopIcons() {
         setMenu(null);
       }}
     >
-      {entries.map((entry, i) => (
-        <DraggableIcon
-          key={entry.key}
-          entry={entry}
-          pos={effectivePos(entry.key, i)}
-          selected={selected === entry.key}
-          onSelect={() => setSelected(entry.key)}
-          onMoved={(x, y) => handleMoved(entry.key, x, y)}
-        />
-      ))}
+      {entries.map((entry) => {
+        const pos = cellToXY(layout[entry.key] ?? { col: 0, row: 0 });
+        return (
+          <DraggableIcon
+            key={entry.key}
+            entry={entry}
+            pos={pos}
+            selected={selected === entry.key}
+            onSelect={() => setSelected(entry.key)}
+            onMoved={(x, y) => handleMoved(entry.key, x, y)}
+          />
+        );
+      })}
       {menu && (
         <div
           className="desktop-icons__menu glass-strong"
