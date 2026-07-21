@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crumbsFor, formatSize } from "./pathUtils";
+import { crumbsFor, formatModified, formatSize } from "./pathUtils";
 
 const ROOT = "C:\\Users\\PC\\Documents\\Trabalhos Programacao";
 
@@ -33,5 +33,16 @@ describe("formatSize", () => {
     expect(formatSize(512, false)).toBe("512 B");
     expect(formatSize(2048, false)).toBe("2.0 KB");
     expect(formatSize(5 * 1024 * 1024, false)).toBe("5.0 MB");
+  });
+});
+
+describe("formatModified", () => {
+  it("timestamp zero/ausente vira travessão", () => {
+    expect(formatModified(0)).toBe("—");
+  });
+
+  it("formata uma data real em pt-BR", () => {
+    const ms = new Date(2026, 0, 15).getTime();
+    expect(formatModified(ms)).toBe("15 de jan. de 2026");
   });
 });
