@@ -41,8 +41,16 @@ describe("formatModified", () => {
     expect(formatModified(0)).toBe("—");
   });
 
-  it("formata uma data real em pt-BR", () => {
-    const ms = new Date(2026, 0, 15).getTime();
-    expect(formatModified(ms)).toBe("15 de jan. de 2026");
+  it("timestamp não-finito (NaN, Infinity) vira travessão", () => {
+    // Infinity é truthy: passa pelo guard antigo e quebra em new Date(Infinity).
+    expect(formatModified(NaN)).toBe("—");
+    expect(formatModified(Infinity)).toBe("—");
+  });
+
+  it("formata data com dia de 2 dígitos e ano (robusto a locale)", () => {
+    // dia 5 prova o zero-padding ("05", não "5"); \D+ tolera variação de
+    // espaço/mês do ICU entre versões do Node — não compara string exata.
+    const out = formatModified(new Date(2026, 0, 5).getTime());
+    expect(out).toMatch(/^05\D+2026$/);
   });
 });

@@ -34,7 +34,7 @@ export function formatSize(bytes: number, isDir: boolean): string {
 }
 
 export function formatModified(ms: number): string {
-  if (!ms) return "—";
+  if (!ms || !Number.isFinite(ms)) return "—";
   return new Date(ms).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
