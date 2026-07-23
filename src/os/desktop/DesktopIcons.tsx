@@ -48,6 +48,10 @@ export function firstFreeCell(
   let c = Math.max(0, col);
   let r = Math.min(PER_COLUMN - 1, Math.max(0, row));
   // Limite generoso; com poucos ícones nunca chega perto.
+  // Lacuna conhecida (aceita): não conhece maxCol no wrap — se TODAS as colunas
+  // visíveis encherem (precisa (maxCol+1)*PER_COLUMN ícones, ~112 numa tela full),
+  // o overflow vai pra coluna fora da tela. Inatingível no uso real; revisitar
+  // se o desktop virar grade densa de dezenas de ícones.
   for (let step = 0; step < 5000; step++) {
     if (!occupied.has(cellKey(c, r))) return { col: c, row: r };
     r += 1;
