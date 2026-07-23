@@ -1,15 +1,25 @@
 .set-app {
   height: 100%;
   overflow-y: auto;
-  padding: 16px 20px 20px;
+  /* scrollbar-gutter reserva o espaço da barra fora do padding — controles à
+     direita param de encostar no scrollbar. Padding-right um pouco maior. */
+  scrollbar-gutter: stable;
+  padding: 16px 24px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
   font-size: 13px;
 }
 
+/* Cada seção é uma coluna com respiro entre as linhas de controle. */
+.set-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .set-section h2 {
-  margin: 0 0 9px;
+  margin: 0 0 2px;
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 500;
@@ -21,7 +31,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   color: var(--text-secondary);
 }
 
@@ -263,11 +273,12 @@
 }
 .set-accents {
   display: flex;
-  gap: 7px;
+  gap: 10px;
+  padding-left: 2px;
 }
 .set-accent {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
@@ -280,7 +291,7 @@
 
 .set-glass-levels {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .set-btn--on {
   border-color: var(--glass-border-focus);
