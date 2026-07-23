@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeLayout, snapToGrid } from "./DesktopIcons";
+import {
+  computeLayout,
+  firstFreeCell,
+  maxColFor,
+  snapToGrid,
+} from "./DesktopIcons";
 
 describe("snapToGrid", () => {
   it("posição solta encaixa na célula mais próxima", () => {
@@ -65,5 +70,42 @@ describe("computeLayout — sem empilhamento", () => {
     const cells = Object.values(l2).map((p) => `${p.col},${p.row}`);
     expect(new Set(cells).size).toBe(cells.length);
     expect(l1.c).toEqual(l2.c);
+  });
+
+  it("reclamp: coluna salva além do maxCol volta pra dentro da tela", () => {
+    // ícone salvo na coluna 8; tela só comporta até a coluna 2
+    const saved = { a: { x: 22 + 8 * 86, y: 52 } };
+    const l = computeLayout(["a"], saved, 2);
+    expect(l.a.col).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("firstFreeCell — quem cede é o ícone arrastado", () => {
+  it("soltar em célula ocupada empurra o PRÓPRIO (drop) pra próxima livre", () => {
+    // B parado em (0,1). Arrasto A e solto em cima de (0,1).
+    const occupied = new Set(["0,1"]);
+    const free = firstFreeCell(0, 1, occupied);
+    // A (arrastado) cede → (0,2); B fica onde estava
+    expect(free).toEqual({ col: 0, row: 2 });
+  });
+
+  it("faz wrap de coluna quando a coluna enche", () => {
+    const occupied = new Set(["0,5", "0,6"]);
+    const free = firstFreeCell(0, 5, occupied);
+    expect(free).toEqual({ col: 1, row: 0 });
+  });
+
+  it("célula livre retorna ela mesma", () => {
+    expect(firstFreeCell(2, 3, new Set())).toEqual({ col: 2, row: 3 });
+  });
+});
+
+describe("maxColFor", () => {
+  it("largura maior comporta mais colunas", () => {
+    expect(maxColFor(400)).toBeLessThan(maxColFor(1920));
+    expect(maxColFor(1920)).toBeGreaterThan(0);
+  });
+  it("largura minúscula não vira negativo", () => {
+    expect(maxColFor(50)).toBe(0);
   });
 });
