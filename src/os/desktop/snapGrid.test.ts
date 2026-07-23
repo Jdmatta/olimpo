@@ -3,6 +3,7 @@ import {
   computeLayout,
   firstFreeCell,
   maxColFor,
+  resolveDrag,
   snapToGrid,
 } from "./DesktopIcons";
 
@@ -97,6 +98,39 @@ describe("firstFreeCell — quem cede é o ícone arrastado", () => {
 
   it("célula livre retorna ela mesma", () => {
     expect(firstFreeCell(2, 3, new Set())).toEqual({ col: 2, row: 3 });
+  });
+});
+
+describe("resolveDrag — puro, deriva de prev (mata a race de closure stale)", () => {
+  const keys = ["a", "b", "c"];
+
+  it("arrastado cede; vizinhos ficam (não reflowam)", () => {
+    // estado inicial reflow: a(0,0) b(0,1) c(0,2). Arrasto 'a' sobre (0,1).
+    const next = resolveDrag({}, keys, "a", 0, 1, 10);
+    const L = computeLayout(keys, next, 10);
+    expect(L.b).toEqual({ col: 0, row: 1 }); // b não se moveu
+    expect(L.c).toEqual({ col: 0, row: 2 }); // c não se moveu
+    expect(L.a).not.toEqual({ col: 0, row: 0 }); // a cedeu
+    const cells = Object.values(L).map((p) => `${p.col},${p.row}`);
+    expect(new Set(cells).size).toBe(cells.length); // sem colisão
+  });
+
+  it("dois drags sequenciais SEM re-render não perdem a 1ª jogada", () => {
+    // drag 1: 'a' pra bem embaixo (row 5)
+    const p1 = resolveDrag({}, keys, "a", 0, 5, 10);
+    const aAfter1 = computeLayout(keys, p1, 10).a;
+    // drag 2 usa p1 (o prev fresco) — simula 2º pointerup antes do re-render
+    const p2 = resolveDrag(p1, keys, "b", 1, 0, 10);
+    const aAfter2 = computeLayout(keys, p2, 10).a;
+    // a jogada de 'a' sobreviveu ao 2º drag (não voltou pro topo)
+    expect(aAfter2).toEqual(aAfter1);
+    expect(aAfter2.row).toBe(5);
+  });
+
+  it("clampa a coluna do drop contra maxCol", () => {
+    const next = resolveDrag({}, keys, "a", 99, 0, 2);
+    const L = computeLayout(keys, next, 2);
+    expect(L.a.col).toBeLessThanOrEqual(2);
   });
 });
 

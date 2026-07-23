@@ -115,6 +115,36 @@ function cellToXY(cell: Cell): { x: number; y: number } {
   return { x: GRID_X + cell.col * CELL_W, y: GRID_Y + cell.row * CELL_H };
 }
 
+/**
+ * Resolve um drop de forma PURA a partir do estado `prev` mais recente — nunca
+ * de um `layout` do closure (que pode estar stale entre dois drags rápidos).
+ * O ícone arrastado vai pra 1ª célula livre; os demais são congelados na posição
+ * efetiva atual (derivada de `prev`), pra ninguém reflowar/subir.
+ */
+export function resolveDrag(
+  prev: Positions,
+  keys: string[],
+  key: string,
+  dropCol: number,
+  dropRow: number,
+  maxCol: number,
+): Positions {
+  const cur = computeLayout(keys, prev, maxCol);
+  const occupied = new Set<string>();
+  for (const k of keys) {
+    if (k === key) continue;
+    const c = cur[k];
+    if (c) occupied.add(cellKey(c.col, c.row));
+  }
+  const free = firstFreeCell(Math.min(dropCol, maxCol), dropRow, occupied);
+  const next = { ...prev };
+  for (const k of keys) {
+    const c = k === key ? free : cur[k];
+    if (c) next[k] = cellToXY(c);
+  }
+  return next;
+}
+
 /** Ícones da área de trabalho — arrastáveis, posição persistida; dblclick abre. */
 function DesktopIcons() {
   const openWindow = useWindowStore((s) => s.open);
@@ -127,6 +157,8 @@ function DesktopIcons() {
   const saveTimer = useRef<number | undefined>(undefined);
   // Só persiste depois de carregar do disco — evita gravar {} por cima do salvo.
   const hydrated = useRef(false);
+  // Último JSON gravado — evita re-gravar o mesmo valor (ex.: no pós-boot).
+  const lastPersisted = useRef<string | null>(null);
 
   useEffect(() => {
     const load = () =>
@@ -141,6 +173,8 @@ function DesktopIcons() {
             const parsed: unknown = JSON.parse(raw);
             if (parsed && typeof parsed === "object") {
               setPositions(parsed as Positions);
+              // Marca como já persistido pra o efeito não re-gravar no boot.
+              lastPersisted.current = JSON.stringify(parsed);
             }
           } catch {
             // JSON corrompido: ignora e volta pro grid default
@@ -173,10 +207,14 @@ function DesktopIcons() {
   // então não depende do clearTimeout neutralizar o double-invoke do StrictMode.
   useEffect(() => {
     if (!hydrated.current) return;
+    const json = JSON.stringify(positions);
+    if (json === lastPersisted.current) return; // não regrava valor idêntico
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
-      settingsSet("desktop_icon_pos", JSON.stringify(positions)).catch(() => {});
+      lastPersisted.current = json;
+      settingsSet("desktop_icon_pos", json).catch(() => {});
     }, 500);
+    return () => window.clearTimeout(saveTimer.current);
   }, [positions]);
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -217,26 +255,11 @@ function DesktopIcons() {
 
   function handleMoved(key: string, dropX: number, dropY: number) {
     const snapped = snapToGrid(dropX, dropY);
-    const col = Math.min(snapped.col, maxColFor(window.innerWidth));
-    // Colisão resolvida NO DROP: quem cede é o ícone ARRASTADO (vai pra próxima
-    // célula livre), não o vizinho parado.
-    const occupied = new Set<string>();
-    for (const e of entries) {
-      if (e.key === key) continue;
-      const c = layout[e.key];
-      if (c) occupied.add(cellKey(c.col, c.row));
-    }
-    const free = firstFreeCell(col, snapped.row, occupied);
-    // Congela TODOS os ícones na posição atual (não só o arrastado): sem isso,
-    // os sem-posição-salva reflowam pra preencher o buraco → vizinho "sobe".
-    setPositions((prev) => {
-      const next = { ...prev };
-      for (const e of entries) {
-        const c = e.key === key ? free : layout[e.key];
-        if (c) next[e.key] = cellToXY(c);
-      }
-      return next;
-    });
+    const mc = maxColFor(window.innerWidth);
+    const keys = entries.map((e) => e.key);
+    // resolveDrag deriva TUDO de `prev` (fresco) dentro do updater — dois drags
+    // rápidos antes do re-render não se atropelam (era o buraco do `layout` stale).
+    setPositions((prev) => resolveDrag(prev, keys, key, snapped.col, snapped.row, mc));
   }
 
   /** Reorganiza tudo na grade limpa: zera posições → computeLayout preenche. */
